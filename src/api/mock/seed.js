@@ -4,11 +4,11 @@
 //
 // Tài khoản demo (mọi tài khoản dùng chung mật khẩu 123456):
 //   admin – Quản trị viên | dev – Developer
-//   tuan  – Người dùng, chủ nhà, có sẵn thiết bị | lan – Người dùng, được chia sẻ quạt
+//   tuan  – Người dùng, chủ nhà, có sẵn thiết bị
 
 import { syntheticValue } from './synthetic.js';
 
-export const SEED_VERSION = 12;
+export const SEED_VERSION = 13;
 export const DEMO_PASSWORD = '123456';
 
 // Băm giả cho chế độ demo. Backend thật dùng bcrypt (NFR4).
@@ -49,10 +49,9 @@ export function createSeed(now = Date.now()) {
     locked_until: null,
     created_at: at(30 * D),
   });
-  const admin = mkUser('admin', 'Phạm Minh Quân', 'admin');
-  const dev = mkUser('dev', 'Lê Hoàng Nam', 'developer');
+  const admin = mkUser('admin', 'Nguyễn Đức Tuấn', 'admin');
+  const dev = mkUser('dev', 'Bùi Phước Thịnh', 'developer');
   const tuan = mkUser('tuan', 'Nguyễn Đức Tuấn', 'user');
-  const lan = mkUser('lan', 'Trần Thị Lan', 'user');
 
   // ---------------------------------------------------------------- types
   const tFan = { _id: oid(), name: 'Quạt', code: 'fan', url_img: null };
@@ -95,7 +94,6 @@ export function createSeed(now = Date.now()) {
   const living = mkPlace(tuan, 'Phòng khách', 'room', floor1, 1);
   const bedroom = mkPlace(tuan, 'Phòng ngủ', 'room', floor1, 2);
   const desk = mkPlace(tuan, 'Góc làm việc', 'zone', bedroom);
-  // "lan" chưa có vị trí riêng (giống DB nhóm) – dùng để thử luồng tạo nhà, đăng ký thiết bị
 
   // ---------------------------------------------------------------- devices + components
   const devices = [];
@@ -140,7 +138,7 @@ export function createSeed(now = Date.now()) {
     return d;
   };
 
-  const fan = mkDevice(dmFan, { device_name: 'Quạt phòng khách', owner_id: tuan._id, place_id: living._id, registered_at: at(10 * D), last_seen: at(3000), shared_with: [lan._id] });
+  const fan = mkDevice(dmFan, { device_name: 'Quạt phòng khách', owner_id: tuan._id, place_id: living._id, registered_at: at(10 * D), last_seen: at(3000) });
   const lamp = mkDevice(dmLight, { device_name: 'Đèn phòng ngủ', owner_id: tuan._id, place_id: bedroom._id, registered_at: at(10 * D), last_seen: at(3000) });
   const curtain = mkDevice(dmCurtain, { device_name: 'Rèm phòng ngủ', owner_id: tuan._id, place_id: bedroom._id, registered_at: at(9 * D), last_seen: at(3000) });
   mkDevice(dmEnv, { device_name: 'Cảm biến góc làm việc', owner_id: tuan._id, place_id: desk._id, registered_at: at(8 * D), last_seen: at(3000) });
@@ -210,7 +208,7 @@ export function createSeed(now = Date.now()) {
     { c: led, src: 'dashboard', p: { mode: 'on', val: 100 }, st: 'failed', by: tuan._id, reason: 'Thiết bị không phản hồi trong 5 giây' },
     { c: servo, src: 'schedule', p: { mode: 'on', val: 180 }, st: 'success', ref: schedules[3] },
     { c: fanMotor, src: 'automation', p: { mode: 'on', val: 80 }, st: 'skipped', ref: threshold_rules[0], reason: 'Ưu tiên thao tác tay (15 phút)' },
-    { c: fanMotor, src: 'dashboard', p: { mode: 'on', val: 65 }, st: 'success', by: lan._id },
+    { c: fanMotor, src: 'dashboard', p: { mode: 'on', val: 65 }, st: 'success', by: tuan._id },
   ];
   for (let i = 0; i < 40; i++) {
     const t = tpl[(i * 5 + 3) % tpl.length];
@@ -272,7 +270,7 @@ export function createSeed(now = Date.now()) {
 
   return {
     version: SEED_VERSION,
-    users: [admin, dev, tuan, lan],
+    users: [admin, dev, tuan],
     tokens: {},
     types: [tFan, tLight, tCurtain, tEnv],
     component_models: cms,

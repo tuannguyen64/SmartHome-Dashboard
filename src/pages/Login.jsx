@@ -75,7 +75,7 @@ export default function Login() {
         <p className="auth-switch">
           Chưa có tài khoản? <Link to="/dang-ky">Đăng ký</Link>
         </p>
-        {USE_MOCK && <p className="small muted" style={{ textAlign: 'center', marginBottom: 12 }}>Chế độ dữ liệu giả lập · tài khoản mẫu: admin, dev, tuan, lan (xem README)</p>}
+        {USE_MOCK && <p className="small muted" style={{ textAlign: 'center', marginBottom: 12 }}>Chế độ dữ liệu giả lập · tài khoản mẫu: admin, dev, tuan (xem README)</p>}
         {error && (
           <div className="auth-error" role="alert">
             <FigmaIcon name="warning" size={12} />
