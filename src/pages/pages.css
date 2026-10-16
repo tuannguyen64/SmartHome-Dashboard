@@ -1,0 +1,82 @@
+/* Màn "SmartHome – Tự động hóa" (node 96:836) */
+.th-item { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; border-bottom: 1.5px solid var(--line); }
+.th-item:first-child { padding-top: 0; }
+.th-item:last-child { border-bottom: none; padding-bottom: 0; }
+.th-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.th-head strong { font-size: 16px; font-weight: 500; }
+
+.rule {
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-tile);
+}
+.rule.off { background: var(--surface-2); }
+.rule.off .rule-text { opacity: 0.65; }
+.rule-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rule-if { font-size: 15px; line-height: 21px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.rule-then { font-size: 14px; line-height: 20px; color: var(--muted); }
+.rule b { font-weight: 600; color: var(--text); }
+
+/* Màn "SmartHome – Hẹn giờ" (node 100:1204) */
+.sch-device { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+.time-box { display: flex; align-items: center; gap: 10px; }
+.time-box input {
+  width: 84px; height: 62px; text-align: center; font-size: 30px; font-weight: 700;
+  border: 1.5px solid var(--border); border-radius: 14px; outline: none; font-variant-numeric: tabular-nums;
+}
+.time-box input:focus { border-color: var(--primary); }
+.time-box span { font-size: 26px; font-weight: 700; }
+.days { display: flex; gap: 8px; flex-wrap: wrap; }
+.days button {
+  width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--gray-bg); color: var(--muted);
+  font-size: 14px; font-weight: 500;
+}
+.days button.on { background: var(--primary); color: #fff; }
+
+/* Cảnh báo */
+.alert-row-title { font-weight: 500; }
+.alert-detail dl { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px 12px; margin: 0; font-size: 14px; }
+.alert-detail dt { color: var(--muted); }
+.alert-detail dd { margin: 0; }
+.unseen { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); display: inline-block; margin-right: 6px; }
+.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.filters .field { width: 170px; }
+.filters .input, .filters .select { height: 36px; font-size: 14px; }
+
+/* Thông tin cá nhân (node 107:1353) */
+.profile-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.profile-avatar {
+  width: 92px; height: 92px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #3c80f7, #2460f5); color: #fff; font-size: 40px; font-weight: 500; margin-bottom: 10px;
+}
+.profile-name { font-size: 22px; font-weight: 600; }
+.profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; border-top: 1.5px solid var(--line); margin-top: 14px; padding-top: 14px; }
+.profile-stats strong { display: block; font-size: 22px; }
+.profile-stats span { font-size: 13px; color: var(--muted); }
+.side-menu { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
+.side-menu button {
+  display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 14px; border: none; background: none;
+  border-radius: 12px; font-size: 15px; color: var(--text-2); text-align: left;
+}
+.side-menu button:hover { background: var(--surface-2); }
+.side-menu button.active { background: var(--primary-50); color: var(--primary); }
+.side-menu button.danger { color: var(--red); }
+.tg-code { font-size: 34px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; color: var(--primary); }
+
+/* Vị trí và thiết bị: cây places */
+.tree { list-style: none; margin: 0; padding: 0; }
+.tree-node {
+  display: flex; align-items: center; gap: 2px; padding: 6px 6px 6px 10px; border-radius: 10px; margin-bottom: 2px;
+}
+.tree-node:hover { background: var(--surface-2); }
+.tree-node.active { background: var(--primary-50); }
+.tree-node button.name {
+  flex: 1; min-width: 0; border: none; background: none; padding: 0; text-align: left; font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+}
+.tree-node .icon-btn { width: 28px; height: 28px; }
+
+/* Mã đăng ký thiết bị */
+.code-chip {
+  display: inline-block; padding: 3px 8px; border-radius: 7px; background: var(--gray-bg);
+  font-family: ui-monospace, Consolas, monospace; font-weight: 600; letter-spacing: 0.12em; font-size: 13px;
+}

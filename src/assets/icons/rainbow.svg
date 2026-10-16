@@ -1,0 +1,15 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Arc-en-ciel" clip-path="url(#clip0_0_52)">
+<path id="Bande" d="M0 0V0.001M34 34H33.999M23 34C23 26.6667 26.6667 23 34 23" stroke="#8877E8" stroke-width="4"/>
+<path id="Bande_2" d="M0 0V0.001M34 34H33.999M19 34C19 24 24 19 34 19" stroke="#38BAE6" stroke-width="4"/>
+<path id="Bande_3" d="M0 0V0.001M34 34H33.999M15 34C15 21.3333 21.3333 15 34 15" stroke="#6ACA4F" stroke-width="4"/>
+<path id="Bande_4" d="M0 0V0.001M34 34H33.999M11 34C11 18.6667 18.6667 11 34 11" stroke="#FFD62A" stroke-width="4"/>
+<path id="Bande_5" d="M0 0V0.001M34 34H33.999M7 34C7 16 16 7 34 7" stroke="#FF9E0B" stroke-width="4"/>
+<path id="Bande_6" d="M0 0V0.001M34 34H33.999M3 34C3 13.3333 13.3333 3 34 3" stroke="#FF5A25" stroke-width="4"/>
+</g>
+<defs>
+<clipPath id="clip0_0_52">
+<rect width="34" height="34" fill="white"/>
+</clipPath>
+</defs>
+</svg>

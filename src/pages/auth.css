@@ -1,0 +1,58 @@
+/* Màn "SmartHome – Đăng nhập" (node 78:366), frame 1440 × 1024 */
+.auth { display: flex; min-height: 100vh; background: #fff; font-family: 'Arimo', var(--font); }
+.auth-intro {
+  position: relative; overflow: hidden; flex: 0 0 56.67%;
+  background: linear-gradient(to bottom, #1d4ed8, #347cf2); color: #fff;
+  padding: 56px 64px 76px; display: flex; flex-direction: column;
+}
+.auth-circle-sm { position: absolute; left: 516px; top: -80px; width: 220px; height: 220px; }
+.auth-circle-lg { position: absolute; left: 516px; top: 724px; width: 420px; height: 420px; }
+.auth-brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; position: relative; }
+.auth-hero { margin: auto 0; padding-top: 40px; max-width: 480px; position: relative; }
+.auth-hero h1 { font-size: 44px; line-height: 50px; font-weight: 700; }
+.auth-hero p { margin-top: 16px; font-size: 18px; line-height: 27px; color: #dbeafe; max-width: 460px; }
+.auth-metrics { display: flex; gap: 16px; padding-top: 40px; flex-wrap: wrap; }
+.auth-metric {
+  width: 140px; height: 110px; padding: 20px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex; flex-direction: column;
+}
+.auth-metric .sym { height: 28px; display: flex; align-items: center; font-size: 22px; line-height: 28px; }
+.auth-metric strong { font-size: 24px; line-height: 29px; }
+.auth-metric span { font-size: 14px; line-height: 20px; color: #dbeafe; }
+.auth-copy { position: relative; font-size: 14px; line-height: 20px; color: #bfdbfe; }
+
+.auth-form-wrap { flex: 1; display: flex; justify-content: center; padding: 120px 24px 48px; }
+.auth-form { width: 100%; max-width: 400px; display: flex; flex-direction: column; }
+.auth-form h2 { font-size: 32px; line-height: 38px; font-weight: 700; color: var(--text); }
+.auth-form .lead { font-size: 14px; line-height: 22px; color: #64748b; }
+.auth-fields { display: flex; flex-direction: column; gap: 16px; padding-top: 28px; }
+.auth-form .label { font-size: 14px; line-height: 20px; color: #475569; }
+.auth-form .field { gap: 3px; }
+.auth-form .input { height: 45px; border: 1px solid #cbd5e1; font-size: 14px; padding: 0 14px; }
+.auth-pass { position: relative; }
+.auth-pass .input { padding-right: 44px; }
+.auth-pass button {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px; border: none; background: none; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-pass button:hover { background: var(--surface-2); }
+.auth-options { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; font-size: 14px; color: var(--text); }
+.auth-submit { padding-top: 25px; }
+.auth-submit .btn { height: 47px; width: 100%; background: var(--primary-600); font-size: 16px; font-weight: 700; color: #fff; }
+.auth-submit .btn:hover:not(:disabled) { background: #1d4ed8; }
+.auth-switch { padding: 26px 0 20px; text-align: center; font-size: 14px; line-height: 20px; color: #64748b; }
+.auth-switch a { color: #2563ff; font-weight: 700; }
+.auth-error { display: flex; gap: 6px; align-items: center; padding: 10px 14px; border-radius: 10px; background: #fef2f2; color: #dc2626; font-size: 14px; line-height: 20px; }
+
+@media (max-width: 1100px) {
+  .auth-intro { flex-basis: 46%; padding: 48px 40px; }
+  .auth-hero h1 { font-size: 36px; line-height: 42px; }
+}
+@media (max-width: 860px) {
+  .auth-intro { display: none; }
+  .auth-form-wrap { padding-top: 56px; }
+  .auth-mobile-brand { display: flex !important; }
+}
+.auth-mobile-brand { display: none; align-items: center; gap: 10px; color: var(--primary); font-size: 22px; font-weight: 700; margin-bottom: 32px; }

@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Soleil" clip-path="url(#clip0_0_84)">
+<path id="Reflet" d="M0 0V0.001M34 34H33.999M11 17C11 13 13 11 17 11" stroke="#FFE580" stroke-width="2" stroke-linecap="round"/>
+<circle id="Disque solaire" cx="17" cy="17" r="9" fill="#FFBD12"/>
+<path id="Rayons" d="M17 0L20 7H14L17 0ZM17 34L14 27H20L17 34ZM0 17L7 14V20L0 17ZM34 17L27 20V14L34 17ZM4 4L12 7L7 12L4 4ZM30 4L27 12L22 7L30 4ZM4 30L7 22L12 27L4 30ZM30 30L22 27L27 22L30 30Z" fill="#FFA900"/>
+</g>
+<defs>
+<clipPath id="clip0_0_84">
+<rect width="34" height="34" fill="white"/>
+</clipPath>
+</defs>
+</svg>

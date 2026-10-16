@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Thermom&#195;&#168;tre" clip-path="url(#clip0_0_88)">
+<path id="Graduations" d="M0 0V0.001M34 34H33.999M14 5H17M14 9H17M14 13H17M14 17H17" stroke="#43828D"/>
+<rect id="Mercure" x="16" y="9" width="3" height="19" rx="1.5" fill="#F8534C"/>
+<path id="R&#195;&#169;servoir" d="M17.5 23.75C20.798 23.75 23.25 25.9892 23.25 28.5C23.25 31.0108 20.798 33.25 17.5 33.25C14.202 33.25 11.75 31.0108 11.75 28.5C11.75 25.9892 14.202 23.75 17.5 23.75Z" fill="#FF6E63" stroke="#85B8BB" stroke-width="1.5"/>
+<rect id="Tube" x="14.75" y="1.75" width="5.5" height="24.5" rx="2.75" fill="#C7EEF2" stroke="#65A5AB" stroke-width="1.5"/>
+</g>
+<defs>
+<clipPath id="clip0_0_88">
+<rect width="34" height="34" fill="white"/>
+</clipPath>
+</defs>
+</svg>

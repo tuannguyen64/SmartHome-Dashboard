@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Eau" clip-path="url(#clip0_0_72)">
+<path id="Reflet" d="M0 0V0.001M34 34H33.999M12 20C10 24.6667 10.6667 27.6667 14 29" stroke="#B7EFFF" stroke-width="2.4" stroke-linecap="round"/>
+<path id="Goutte" d="M16 0C14 6 6 17 6 23C6 37 27 37 27 23C27 16 20 5 16 0Z" fill="#41C3F6"/>
+</g>
+<defs>
+<clipPath id="clip0_0_72">
+<rect width="34" height="34" fill="white"/>
+</clipPath>
+</defs>
+</svg>

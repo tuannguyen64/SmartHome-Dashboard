@@ -1,0 +1,53 @@
+/* Màn "SmartHome – Tổng quan" (node 78:2264) */
+.ov-sensor { display: flex; flex-direction: column; min-height: 180px; color: inherit; transition: opacity 0.2s; }
+.ov-sensor.dim { opacity: 0.55; }
+.ov-sensor-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.ov-sensor .icon-tile { width: 44px; height: 44px; }
+.ov-value { padding-top: 12px; display: flex; align-items: baseline; gap: 6px; min-height: 52px; }
+.ov-num { font-size: 34px; line-height: 40px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.ov-num.tone-red { color: var(--red); }
+.ov-num.tone-amber { color: var(--amber); }
+.ov-unit { font-size: 18px; font-weight: 500; color: var(--muted); }
+.ov-nodata { font-size: 20px; line-height: 40px; color: var(--muted); }
+.ov-label { font-size: 15px; line-height: 20px; color: var(--muted); margin-top: 2px; }
+.ov-meta { font-size: 13px; line-height: 19px; color: var(--muted); margin-top: 4px; }
+.ov-alertcard:hover { text-decoration: none; box-shadow: 0 4px 12px rgba(36, 56, 88, 0.08); }
+
+.ov-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: var(--gap); align-items: start; }
+.ov-room { display: flex; flex-direction: column; gap: 12px; }
+.ov-room + .ov-room { padding-top: 20px; border-top: 1.5px solid var(--line); }
+.ov-room-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ov-room-head strong { font-weight: 500; font-size: 16px; }
+.ov-devices { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+
+.ov-alerts { display: flex; flex-direction: column; }
+.ov-alert { display: flex; gap: 13px; padding: 12px 0; border-bottom: 1.5px solid var(--line); color: inherit; }
+.ov-alert:last-child { border-bottom: none; }
+.ov-alert:hover { text-decoration: none; background: var(--surface-2); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 10px; }
+.ov-alert-title { font-size: 16px; line-height: 20px; font-weight: 600; }
+.ov-alert-text { font-size: 14px; line-height: 19px; color: var(--muted); margin-top: 2px; }
+.ov-alert-time { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; }
+
+/* Ô thiết bị */
+.dev { border: 1.5px solid var(--border); border-radius: var(--radius-tile); padding: 14px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.dev-offline { opacity: 0.6; }
+.dev-row { display: flex; align-items: center; gap: 14px; }
+.dev-info { flex: 1; min-width: 0; }
+.dev-name { font-size: 16px; line-height: 20px; font-weight: 500; }
+.dev-sub { font-size: 14px; line-height: 19px; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.dev-wait { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); }
+.dev-wait .spinner { width: 12px; height: 12px; }
+.dev-ctrl { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.dev-ctrl-head { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: var(--text-2); gap: 8px; flex-wrap: wrap; }
+.dev-ctrl-head strong { font-size: 18px; }
+.dev-color { width: 16px; height: 16px; border-radius: 5px; border: 1px solid var(--border-2); display: inline-block; }
+.dev .dev-mode { width: auto; height: 34px; font-size: 13px; padding: 0 8px; flex: none; }
+.dev-sensors { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--muted); }
+.dev-sensors strong { color: var(--text); font-weight: 600; }
+
+@media (max-width: 1280px) {
+  .ov-bottom { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+@media (max-width: 1100px) {
+  .ov-bottom { grid-template-columns: minmax(0, 1fr); }
+}
