@@ -20,7 +20,6 @@ Mở http://localhost:5173. Trên Windows PowerShell, nếu báo lỗi "running 
 | `admin` | Quản trị viên | Vào được trang Quản trị: tài khoản, thiết bị, mã đăng ký |
 | `dev` | Developer | Trang Quản trị, chỉ phần thiết bị và mã đăng ký |
 | `tuan` | Người dùng | Chủ nhà: có cây vị trí và 4 thiết bị (quạt, đèn, rèm, cảm biến môi trường) |
-| `lan` | Người dùng | Chưa có vị trí riêng, được chia sẻ quạt phòng khách (dùng để thử tạo nhà, đăng ký thiết bị) |
 
 Linh kiện khớp backend và firmware của nhóm (xem `HUONG-DAN-TRIEN-KHAI.md`): `dht20-temp`, `dht20-hum`, `light` (cảm biến); `fan-dc` (quạt, chỉ chạy từ 30%), `led` (đèn LED RGB **chỉ bật/tắt, bật là sáng đỏ**), `servo-sg90` (rèm, 0–180°).
 
