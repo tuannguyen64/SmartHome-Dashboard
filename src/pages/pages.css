@@ -18,6 +18,13 @@
 
 /* Màn "SmartHome – Hẹn giờ" (node 100:1204) */
 .sch-device { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+@media (max-width: 720px) {
+  /* Màn hẹp: bỏ icon để tên thiết bị không vỡ từng chữ, nút bật/tắt không bị cắt */
+  .sch-device > :first-child:not(:last-child) { display: none; }
+  .sch-device { min-width: 110px; }
+  .sch-table td, .sch-table th { padding-right: 6px; }
+  .sch-actions { flex-direction: column-reverse; align-items: flex-end; gap: 6px; }
+}
 .time-box { display: flex; align-items: center; gap: 10px; }
 .time-box input {
   width: 84px; height: 62px; text-align: center; font-size: 30px; font-weight: 700;

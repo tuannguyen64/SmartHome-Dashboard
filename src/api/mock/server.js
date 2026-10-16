@@ -643,6 +643,13 @@ export function listPlaces() {
 
 const PARENTS = { home: [], floor: ['home'], room: ['home', 'floor'], zone: ['room'] };
 
+// Tên vị trí không trùng với vị trí khác cùng cấp (không phân biệt hoa/thường)
+function assertUniquePlaceName(u, name, parentId, selfId = null) {
+  const key = name.trim().toLocaleLowerCase('vi');
+  const dup = db.places.find((x) => x._id !== selfId && x.owner_id === u._id && x.parent_id === (parentId ?? null) && x.name.toLocaleLowerCase('vi') === key);
+  if (dup) throw new ApiError(`Đã có "${dup.name}" ở cấp này`, 'validation', { fields: { name: 'Tên bị trùng' } });
+}
+
 export function createPlace({ name, type, parent_id }) {
   return respond(() => {
     const u = requireUser();
@@ -651,6 +658,7 @@ export function createPlace({ name, type, parent_id }) {
     if (parent && parent.owner_id !== u._id) throw new ApiError('Vị trí cha không thuộc về bạn', 'forbidden');
     if (!PARENTS[type] || (parent ? !PARENTS[type].includes(parent.type) : type !== 'home'))
       throw new ApiError('Loại vị trí không hợp lệ ở cấp này', 'validation');
+    assertUniquePlaceName(u, name, parent?._id);
     const p = {
       _id: oid(), owner_id: u._id, name: name.trim(), type, parent_id: parent?._id ?? null,
       ancestors: parent ? [...parent.ancestors, parent._id] : [], img_url: null,
@@ -667,13 +675,15 @@ export function updatePlace(id, { name, parent_id }) {
     const p = must(byId(db.places, id), 'vị trí');
     if (p.owner_id !== u._id) throw new ApiError('Không có quyền', 'forbidden');
     if (name !== undefined) {
-      if (!String(name).trim()) throw new ApiError('Nhập tên', 'validation');
+      if (!String(name).trim()) throw new ApiError('Nhập tên', 'validation', { fields: { name: 'Bắt buộc' } });
+      assertUniquePlaceName(u, name, parent_id ?? p.parent_id, p._id);
       p.name = name.trim();
     }
     if (parent_id && parent_id !== p.parent_id) {
       const parent = must(byId(db.places, parent_id), 'vị trí cha');
       if (!PARENTS[p.type].includes(parent.type) || parent._id === p._id || parent.ancestors.includes(p._id))
         throw new ApiError('Không thể chuyển tới vị trí này', 'validation');
+      assertUniquePlaceName(u, p.name, parent._id, p._id);
       const oldLen = p.ancestors.length;
       p.parent_id = parent._id;
       p.ancestors = [...parent.ancestors, parent._id];

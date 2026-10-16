@@ -23,9 +23,13 @@ export default function PlacesDevices() {
   const [deviceForm, setDeviceForm] = useState(null);
   const [register, setRegister] = useState(false);
 
-  const places = (home?.places ?? []).filter((p) => p.owner_id === user._id);
-  const children = (id) => places.filter((p) => p.parent_id === id).sort((a, b) => a.order - b.order);
-  const roots = places.filter((p) => !p.parent_id || !places.some((x) => x._id === p.parent_id));
+  const owned = (home?.places ?? []).filter((p) => p.owner_id === user._id);
+  const children = (id) => owned.filter((p) => p.parent_id === id).sort((a, b) => a.order - b.order);
+  const roots = owned.filter((p) => !p.parent_id || !owned.some((x) => x._id === p.parent_id));
+  // Thứ tự duyệt cây (cha đứng trước con) cho các ô chọn vị trí
+  const places = [];
+  const walk = (p) => (places.push(p), children(p._id).forEach(walk));
+  roots.forEach(walk);
   const inSelected = (d) => {
     if (!selected) return true;
     const p = home.places.find((x) => x._id === d.place_id);
@@ -100,7 +104,7 @@ export default function PlacesDevices() {
         </button>
       </div>
 
-      <div className="split" style={{ gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)' }}>
+      <div className="split" style={{ '--split-cols': 'minmax(0, 360px) minmax(0, 1fr)' }}>
         <section className="card">
           <div className="card-head">
             <h2 className="card-title">Vị trí</h2>

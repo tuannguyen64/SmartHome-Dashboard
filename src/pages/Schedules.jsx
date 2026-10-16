@@ -145,7 +145,7 @@ export default function Schedules() {
             <Empty title={filter === 'all' ? 'Chưa có lịch hẹn' : 'Không có lịch phù hợp'}>Tạo lịch ở khung bên cạnh.</Empty>
           ) : (
             <div className="table-wrap">
-              <table className="table">
+              <table className="table sch-table">
                 <thead>
                   <tr>
                     <th>Thiết bị</th>
@@ -174,7 +174,7 @@ export default function Schedules() {
                         </td>
                         <td>
                           <Badge tone={s.action.mode === 'on' ? 'green' : 'amber'}>
-                            {s.action.mode === 'on' ? (typeof v === 'number' ? `Bật ${v}${c?.componentModel.unit ?? ''}` : 'Bật') : 'Tắt'}
+                            {s.action.mode === 'on' ? (typeof v === 'number' && c?.componentModel.type !== 'switch' ? `Bật ${v}${c?.componentModel.unit ?? ''}` : 'Bật') : 'Tắt'}
                           </Badge>
                           {v?.color && <span className="dev-color" style={{ background: v.color, marginLeft: 6, verticalAlign: 'middle' }} />}
                         </td>
@@ -185,7 +185,7 @@ export default function Schedules() {
                           {s.enabled && c && c.device_mode !== 'custom' && <div className="small" style={{ color: 'var(--amber)' }}>Sẽ bỏ qua: {DEVICE_MODES[c.device_mode].label}</div>}
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
-                          <div className="inline" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
+                          <div className="inline sch-actions" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
                             <button className="icon-btn" onClick={() => remove(s)} aria-label="Xóa lịch">
                               <Icon name="trash" size={16} />
                             </button>
@@ -231,7 +231,7 @@ export default function Schedules() {
               )}
               {f.mode === 'on' && cm && cm.metric !== 'rgb_color' && cm.type !== 'switch' && cm.range && (
                 <Field label={`Mức: ${f.level}${cm.unit}`}>
-                  <input type="range" className="slider" min={cm.range.min} max={cm.range.max} value={f.level} style={{ '--fill': `${f.level}%` }} onChange={(e) => set('level', Number(e.target.value))} />
+                  <input type="range" className="slider" min={cm.range.min} max={cm.range.max} value={f.level} style={{ '--fill': `${((f.level - cm.range.min) / (cm.range.max - cm.range.min)) * 100}%` }} onChange={(e) => set('level', Number(e.target.value))} />
                 </Field>
               )}
               <Field label="Thời gian (GMT+7)" error={fields.cron}>

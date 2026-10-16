@@ -260,7 +260,7 @@ function Devices() {
             </select>
           </Field>
           <Field label="Số lượng (1–50)">
-            <input className="input" style={{ width: 120 }} type="number" min={1} max={50} value={clone.quantity} onChange={(e) => setClone({ ...clone, quantity: e.target.value })} />
+            <input className="input" style={{ width: 120 }} type="number" required min={1} max={50} value={clone.quantity} onChange={(e) => setClone({ ...clone, quantity: e.target.value })} />
           </Field>
           <button className="btn btn-primary" disabled={!models.data?.length}>Nhân bản</button>
         </div>

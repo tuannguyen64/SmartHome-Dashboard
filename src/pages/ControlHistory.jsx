@@ -93,7 +93,7 @@ export default function ControlHistory() {
                 <thead>
                   <tr>
                     <th>Thời điểm</th>
-                    <th>Thiết bị</th>
+                    <th className="hide-sm">Thiết bị</th>
                     <th>Lệnh</th>
                     <th>Nguồn</th>
                     <th>Kết quả</th>
@@ -106,9 +106,12 @@ export default function ControlHistory() {
                     const k = comp(c.component_id) ?? home?.components.find((x) => x.device_id === c.device_id && x.componentModel._id === c.component_model_id);
                     return (
                       <tr key={c._id}>
-                        <td className="nowrap mono">{fmtDateTime(c.sent_at)}</td>
-                        <td>{home?.deviceById.get(c.device_id)?.device_name ?? 'Thiết bị'}</td>
-                        <td>{fmtAction(k?.componentModel, c.payload)}</td>
+                        <td className="mono hist-time">{fmtDateTime(c.sent_at)}</td>
+                        <td className="hide-sm">{home?.deviceById.get(c.device_id)?.device_name ?? 'Thiết bị'}</td>
+                        <td>
+                          {fmtAction(k?.componentModel, c.payload)}
+                          <div className="small muted show-sm">{home?.deviceById.get(c.device_id)?.device_name ?? 'Thiết bị'}</div>
+                        </td>
                         <td>
                           <div>{COMMAND_SOURCES[c.source] ?? c.source}</div>
                           <div className="small muted">{who(c)}</div>

@@ -4,14 +4,14 @@ Ghi chú bàn giao cho phiên Claude kế tiếp. Trả lời người dùng b�
 
 ## Dự án
 - Web Dashboard cho hệ thống **Nhà thông minh** (đồ án đa ngành DADN-CNPM). Người dùng (Tuấn) phụ trách **frontend web từ Figma**.
-- Thư mục: `C:\Users\Tuan\OneDrive\Desktop\Đồ án đa ngành\web` (Desktop đồng bộ OneDrive).
+- Thư mục: `D:\DoAnDaNganh\web` (đã chuyển khỏi OneDrive Desktop ngày 16/10/2026).
 - GitHub: https://github.com/tuannguyen64/SmartHome-Dashboard (**public**, nhánh `main`). Commit bằng tên `tuannguyen64`, email noreply GitHub (đã đặt trong `git config` cục bộ của repo).
 - `gh` CLI đã cài và đăng nhập `tuannguyen64` (`C:\Program Files\GitHub CLI\gh.exe`). Khi người dùng nói "update git": quét secret → commit → push.
 - Stack: React 18 + Vite 5 + React Router 6 + Recharts. Chạy: `npm.cmd run dev` (PowerShell chặn `npm.ps1`) → http://localhost:5173. Node: `C:\Program Files\nodejs`.
 
 ## Nguồn thiết kế / tài liệu
 - Figma: file key `hElDnWwzg5yNwFxVVkocYf` (DADN-CNPM), đọc qua connector Figma. 6 frame: Đăng nhập 78:366, Tổng quan 78:2264, Biểu đồ 92:295, Tự động hóa 96:836, Hẹn giờ 100:1204, Thông tin cá nhân 107:1353. Font Roboto (dashboard) / Arimo (login), màu chính `#2460f5`, frame 2000px → thu ~0.72.
-- Thư mục cha `Đồ án đa ngành\` có: đặc tả (`Dac-ta-he-thong-Nha-thong-minh.docx`), `database-design.md`, `Thiết kế MongoDB…docx`, `HUONG-DAN-TRIEN-KHAI.md` (**chứa key thật – không đọc to, không commit**), `atlas-credentials.env` (**bí mật**), ảnh kiến trúc, 2 PDF tài liệu môn (chưa đọc được – thiếu poppler).
+- Thư mục cha `D:\DoAnDaNganh\` có: đặc tả (`Dac-ta-he-thong-Nha-thong-minh.docx`), `database-design.md`, `Thiết kế MongoDB…docx`, `HUONG-DAN-TRIEN-KHAI.md` (**chứa key thật – không đọc to, không commit**), `atlas-credentials.env` (**bí mật**), ảnh kiến trúc, 2 PDF tài liệu môn (chưa đọc được – thiếu poppler).
 - Repo nhóm (đã clone để tham khảo, không sửa): `FrontEnd-SmartHome/` (web cũ của tuancapoo, React 19, gọi backend cổng 5000), `Hardware_SmartHome/` (firmware Yolo:Bit `yolobit-main.py` + giả lập `sim/gui_sim.py`), `mock-backend/` (backend giả Node thuần mình viết để xem web cũ).
 - **Backend thật** (Node/Express, MongoDB Atlas, Adafruit IO 2 tài khoản up/down, S3) nằm ở máy bạn khác (`D:\db\backend`), **không có trên máy này**.
 
@@ -38,7 +38,8 @@ Ghi chú bàn giao cho phiên Claude kế tiếp. Trả lời người dùng b�
 1. Thêm trang Developer: Loại thiết bị, Loại linh kiện, Mẫu thiết bị + **Xuất JSON** cho firmware (API backend đã có: `/types`, `/component-models`, `/device-models`, `/device-models/:id/export`).
 2. Hướng dẫn chạy giả lập Yolo:Bit `Hardware_SmartHome/sim/gui_sim.py` (cần Python + paho-mqtt).
 3. Viết đặc tả API `threshold_rules` cho nhóm backend.
-- Chưa test kỹ: lưu quy tắc/lịch mới, CRUD vị trí, đăng ký thiết bị bằng mã, nhân bản thiết bị, giao diện mobile của bản mới.
+- Đã test (16/10/2026, chế độ mock): lưu quy tắc/lịch, CRUD vị trí, đăng ký bằng mã, nhân bản thiết bị, mobile 375px không tràn ngang. Còn mở: lịch "Tắt" servo rèm chưa rõ nghĩa (0° hay giữ nguyên); rèm dùng emoji 🪟 thay vì icon Figma.
+- Chạy web trong Browser pane của app: cấu hình ở `D:\DoAnDaNganh\.claude\launch.json` (tên `web`).
 
 ## Bảo mật
 - Không commit/đọc to nội dung `HUONG-DAN-TRIEN-KHAI.md`, `atlas-credentials.env`. Đã cảnh báo người dùng chuyển 2 file ra khỏi OneDrive.

@@ -35,7 +35,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="split" style={{ gridTemplateColumns: 'minmax(0, 340px) minmax(0, 1fr)' }}>
+      <div className="split" style={{ '--split-cols': 'minmax(0, 340px) minmax(0, 1fr)' }}>
         <div className="stack" style={{ gap: 'var(--gap)' }}>
           <section className="card profile-card">
             <div className="profile-avatar">{name.trim().split(/\s+/).pop().charAt(0).toUpperCase()}</div>

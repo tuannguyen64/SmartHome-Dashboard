@@ -449,7 +449,7 @@ function RuleForm({ initial, ctx, onClose }) {
             )}
             {f.breachMode === 'on' && tcm && tcm.metric !== 'rgb_color' && tcm.type !== 'switch' && tcm.range && (
               <Field label={`Mức: ${f.breachLevel}${tcm.unit}`} className="full">
-                <input type="range" className="slider" min={tcm.range.min} max={tcm.range.max} value={f.breachLevel} style={{ '--fill': `${f.breachLevel}%` }} onChange={(e) => set('breachLevel', Number(e.target.value))} />
+                <input type="range" className="slider" min={tcm.range.min} max={tcm.range.max} value={f.breachLevel} style={{ '--fill': `${((f.breachLevel - tcm.range.min) / (tcm.range.max - tcm.range.min)) * 100}%` }} onChange={(e) => set('breachLevel', Number(e.target.value))} />
                 {tcm.min_start != null && f.breachLevel < tcm.min_start && <span className="small" style={{ color: 'var(--amber)' }}>Dưới {tcm.min_start}{tcm.unit} thiết bị có thể không chạy.</span>}
               </Field>
             )}
