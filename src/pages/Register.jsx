@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isStaff } from '../utils/constants.js';
 import { FigmaIcon } from '../components/icons.jsx';
 import { Spinner } from '../components/ui.jsx';
 import AuthShell from './AuthShell.jsx';
@@ -14,7 +15,7 @@ export default function Register() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={isStaff(user) ? '/admin' : '/'} replace />;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const submit = async (e) => {

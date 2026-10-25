@@ -40,6 +40,7 @@ export function createSeed(now = Date.now()) {
   const mkUser = (username, full_name, role) => ({
     _id: oid(),
     username,
+    email: `${username}@smarthome.local`,
     password: fakeHash(DEMO_PASSWORD),
     full_name,
     role,
@@ -283,6 +284,19 @@ export function createSeed(now = Date.now()) {
     schedules,
     commands,
     alerts,
+    audit_logs: [],
+    system_alert_states: {},
+    system_settings: {
+      offline_after_seconds: 60,
+      alert_cooldown_minutes: 10,
+      remind_after_minutes: 15,
+      audit_retention_days: 180,
+      alert_rules: [
+        { metric: 'temperature', min: null, max: 32, severity: 'warning', channels: ['dashboard'] },
+        { metric: 'humidity', min: 40, max: 80, severity: 'warning', channels: ['dashboard'] },
+        { metric: 'light', min: null, max: 90, severity: 'warning', channels: ['dashboard'] },
+      ],
+    },
     live: {},
   };
 }

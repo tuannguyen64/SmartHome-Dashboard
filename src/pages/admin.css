@@ -1,0 +1,135 @@
+.admin-page { max-width: 1600px; }
+.admin-metrics { gap: 16px; }
+.admin-metric {
+  padding: 20px;
+  border: 1px solid #edf1f7;
+  border-radius: 16px;
+}
+.admin-metric-top { display: flex; align-items: center; justify-content: space-between; min-height: 38px; }
+.admin-metric-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.admin-metric-icon.blue { background: #eef2ff; color: #4f46e5; }
+.admin-metric-icon.green { background: #dcfce7; color: #15803d; }
+.admin-metric-icon.amber { background: #fff3c6; color: #ba5000; }
+.admin-metric-icon.purple { background: #f3e8ff; color: #7e22ce; }
+.admin-metric-label { margin-top: 18px; color: var(--muted); font-size: 14px; }
+.admin-metric-value { margin-top: 4px; color: var(--text); font-size: 28px; line-height: 34px; font-weight: 700; }
+.admin-metric-detail { margin-top: 5px; color: var(--muted); font-size: 13px; }
+.admin-sensor-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-sensor-item { display: flex; align-items: baseline; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.admin-sensor-label { color: var(--muted); font-size: 14px; }
+.admin-sensor-item strong { color: var(--text); font-size: 19px; }
+.admin-sensor-item small { color: var(--muted); font-size: 13px; font-weight: 500; }
+.admin-sensor-count { margin-left: auto; color: var(--muted-2); font-size: 12px; white-space: nowrap; }
+.admin-log-filters .filters { align-items: flex-end; }
+.admin-log-filters .field { flex: 1 1 170px; }
+.admin-log-card { padding-bottom: 14px; }
+.admin-log-table { min-width: 980px; }
+.admin-log-id { display: block; color: var(--muted-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+.admin-log-details { display: block; max-width: 340px; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-settings-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: var(--gap); align-items: start; }
+.admin-settings-form, .admin-server-card { min-width: 0; }
+.admin-settings-fields { display: grid; gap: 18px; }
+.admin-number-input { display: flex; align-items: center; gap: 10px; }
+.admin-number-input .input { max-width: 180px; }
+.admin-number-input > span { color: var(--muted); font-size: 14px; }
+.admin-settings-error { margin-top: 18px; }
+.admin-settings-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+.admin-server-list { margin: 0; }
+.admin-server-list > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.admin-server-list > div:last-child { border-bottom: 0; }
+.admin-server-list dt { color: var(--muted); font-size: 14px; }
+.admin-server-list dd { margin: 0; color: var(--text); font-size: 14px; font-weight: 500; text-align: right; }
+.admin-settings-note { margin-top: 16px; padding: 12px; border-radius: 10px; background: var(--primary-50); color: #1e40af; font-size: 13px; line-height: 1.5; }
+.admin-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, .9fr); gap: var(--gap); align-items: start; }
+.admin-incidents-card, .admin-traffic-card { min-width: 0; }
+.admin-incident-table { min-width: 720px; }
+.admin-incident-message { display: block; max-width: 280px; margin-top: 3px; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-chart { height: 292px; }
+.admin-chart-legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.admin-chart-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.admin-chart-legend i { width: 8px; height: 8px; display: inline-block; border-radius: 50%; }
+.admin-chart-legend .mqtt-in { background: #4f46e5; }
+.admin-chart-legend .mqtt-out { background: #22c55e; }
+.admin-chart-legend .http { background: #f59e0b; }
+.admin-operations-grid { display: grid; grid-template-columns: minmax(260px, .9fr) repeat(2, minmax(280px, 1fr)); gap: var(--gap); align-items: stretch; }
+.admin-ops-metrics, .admin-ops-chart { min-width: 0; }
+.admin-ops-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.admin-ops-kpis > div { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 11px; }
+.admin-ops-kpis span { color: var(--muted); font-size: 12px; }
+.admin-ops-kpis strong { color: var(--text); font-size: 20px; }
+.admin-small-chart { height: 200px; }
+.admin-global-rules { margin-top: 24px; }
+.admin-settings-section-head { margin-bottom: 12px; }
+.admin-settings-section-head h3 { margin: 0; color: var(--text); font-size: 16px; }
+.admin-settings-section-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.admin-rules-table { min-width: 850px; }
+.admin-rule-number { width: 104px; }
+.admin-rule-severity { min-width: 118px; }
+.admin-channel-list { display: flex; flex-direction: column; gap: 5px; }
+.admin-channel-list label { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 12px; white-space: nowrap; }
+.admin-channel-list input { accent-color: #4f46e5; }
+.admin-page .table td .admin-log-id { margin-top: 3px; }
+
+.admin-hdr { position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid var(--border); }
+.admin-hdr-inner { min-height: var(--header-h); max-width: 1720px; margin: 0 auto; padding: 0 var(--page-x); display: flex; align-items: center; gap: 24px; }
+.admin-nav { display: flex; align-items: center; justify-content: center; gap: 22px; min-width: 0; flex: 1; }
+.admin-nav a { padding: 25px 0 23px; border-bottom: 2px solid transparent; color: var(--muted); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.admin-nav a:hover { color: var(--text); text-decoration: none; }
+.admin-nav a.active { color: #4f46e5; border-color: #4f46e5; }
+.admin-hdr-right { display: flex; align-items: center; gap: 12px; flex: none; }
+.admin-connection { display: inline-flex; align-items: center; gap: 7px; color: #b91c1c; font-size: 12px; white-space: nowrap; }
+.admin-connection .dot { width: 8px; height: 8px; background: #ef4444; }
+.admin-connection.is-connected { color: #15803d; }
+.admin-connection.is-connected .dot { background: #22c55e; }
+.admin-connection-label { display: inline; }
+.admin-bell { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; }
+.admin-bell:hover { background: var(--surface-2); }
+.admin-account { position: relative; }
+.admin-account-button { display: flex; align-items: center; gap: 9px; padding: 3px; border: 0; border-radius: 12px; background: transparent; text-align: right; }
+.admin-account-button:hover, .admin-account-button[aria-expanded="true"] { background: var(--surface-2); }
+.admin-account-button .hdr-user-text span { color: #4f46e5; }
+.admin-account-button .avatar { background: #4f46e5; }
+.admin-account-button > svg { color: var(--muted); }
+.admin-account-menu { position: absolute; z-index: 35; top: calc(100% + 10px); right: 0; display: flex; flex-direction: column; width: 240px; padding: 7px; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: var(--shadow-pop); text-align: left; }
+.admin-account-summary { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; border-bottom: 1px solid var(--line); }
+.admin-account-summary strong { color: var(--text); font-size: 14px; }
+.admin-account-summary span { color: var(--muted); font-size: 12px; }
+.admin-account-menu a, .admin-account-menu button { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--text-2); font-size: 14px; text-align: left; }
+.admin-account-menu a:hover, .admin-account-menu button:hover { background: var(--surface-2); text-decoration: none; }
+.admin-account-menu button.danger { color: var(--red); }
+.admin-main { min-height: calc(100vh - var(--header-h)); }
+
+@media (max-width: 1250px) {
+  .admin-hdr-inner { gap: 14px; }
+  .admin-nav { justify-content: flex-start; overflow-x: auto; gap: 18px; }
+  .admin-dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-operations-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-ops-metrics { grid-column: 1 / -1; }
+  .admin-settings-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .admin-hdr-inner { min-height: auto; padding-top: 10px; padding-bottom: 0; flex-wrap: wrap; gap: 6px 12px; }
+  .admin-hdr-inner .hdr-brand { font-size: 18px; }
+  .admin-hdr-inner .hdr-logo { width: 32px; height: 32px; }
+  .admin-nav { order: 3; flex-basis: 100%; margin: 0 calc(-1 * var(--page-x)); padding: 0 var(--page-x); }
+  .admin-nav a { padding: 12px 0 10px; font-size: 13px; }
+  .admin-hdr-right { margin-left: auto; gap: 7px; }
+  .admin-account-button .hdr-user-text, .admin-connection-label { display: none; }
+  .admin-account-button .avatar { width: 34px; height: 34px; }
+  .admin-account-menu { right: 0; }
+  .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .admin-metric { padding: 15px; }
+  .admin-metric-value { font-size: 24px; }
+  .admin-sensor-list { grid-template-columns: minmax(0, 1fr); }
+  .admin-operations-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-ops-metrics { grid-column: auto; }
+  .admin-small-chart { height: 220px; }
+  .admin-chart { height: 250px; }
+}
+@media (max-width: 420px) {
+  .admin-metrics { grid-template-columns: minmax(0, 1fr); }
+  .admin-traffic-card .card-head { align-items: flex-start; }
+}

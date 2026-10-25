@@ -47,7 +47,7 @@ export default function Header() {
 
   const name = user?.full_name || user?.username || '';
   const initial = name.trim().split(/\s+/).pop().charAt(0).toUpperCase();
-  const nav = isStaff(user) ? [...NAV, { to: '/quan-tri', label: 'Quản trị' }] : NAV;
+  const nav = isStaff(user) ? [...NAV, { to: '/admin', label: 'Quản trị' }] : NAV;
 
   return (
     <header className="hdr">
@@ -55,7 +55,7 @@ export default function Header() {
         <button className="icon-btn hdr-burger" onClick={() => setMenuOpen((v) => !v)} aria-label="Mở menu">
           <Icon name={menuOpen ? 'x' : 'menu'} size={22} />
         </button>
-        <Link to="/" className="hdr-brand">
+        <Link to={isStaff(user) ? '/admin' : '/'} className="hdr-brand">
           <span className="hdr-logo">
             <FigmaIcon name="house" size={17} />
           </span>
@@ -93,7 +93,7 @@ export default function Header() {
                   <Icon name="home" size={16} /> Vị trí và thiết bị
                 </Link>
                 {isStaff(user) && (
-                  <Link to="/quan-tri">
+                  <Link to="/admin">
                     <Icon name="sliders" size={16} /> Quản trị
                   </Link>
                 )}

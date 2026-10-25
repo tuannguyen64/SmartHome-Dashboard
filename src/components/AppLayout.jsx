@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isStaff } from '../utils/constants.js';
 import { RealtimeProvider, useLiveEvent, useRealtimeStatus } from '../context/RealtimeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { USE_MOCK } from '../api/index.js';
@@ -42,6 +43,7 @@ export default function AppLayout() {
       </div>
     );
   if (!user) return <Navigate to="/dang-nhap" replace state={{ from: location.pathname }} />;
+  if (isStaff(user) && location.pathname === '/') return <Navigate to="/admin" replace />;
   return (
     <RealtimeProvider>
       <Header />

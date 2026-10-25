@@ -17,7 +17,7 @@ Ghi chú bàn giao cho phiên Claude kế tiếp. Trả lời người dùng b�
 
 ## Quyết định đã chốt
 - Giao diện theo Figma; **dữ liệu theo MongoDB của nhóm** + API backend nhóm (không theo đặc tả 02/10 ở các chỗ mâu thuẫn).
-- Đăng nhập bằng **username**; role `admin | developer | user`; trang `/quan-tri` cho staff.
+- Đăng nhập bằng **username**; role `admin | developer | user`; khu quản trị hợp nhất tại `/admin/*` (`/quan-tri` chuyển hướng tương thích).
 - `places` dạng cây home > floor > room > zone; `devices.mode` custom/on/off; `threshold_rules` gộp ngưỡng + `auto_action`; `schedules` dùng `cron`.
 - Khớp phần cứng thật: linh kiện `dht20-temp`, `dht20-hum`, `light`, `fan-dc` (min_start 30, chặn dưới 30), `led` (**chỉ bật/tắt, sáng đỏ**, type switch), `servo-sg90` (0–180°). 4 mẫu: Quạt, Đèn, Rèm, Cảm biến môi trường.
 - Lệnh gửi: `POST /devices/:id/commands` body `{model, componentModelId, mode, val?}`.
@@ -32,7 +32,7 @@ Ghi chú bàn giao cho phiên Claude kế tiếp. Trả lời người dùng b�
 - CSS: styles.css (token), components/layout.css, pages/{pages,overview,auth}.css. `main.jsx` import CSS chung **trước** App.
 
 ## Backend nhóm chưa có (web đã có giao diện, chỉ chạy ở mock)
-`/threshold-rules`, `/schedules`, `/alerts`, `/commands` (toàn cục), `/components`, `PATCH /users/me`. http.js đã báo lỗi thân thiện "Backend hiện chưa có chức năng này".
+`/threshold-rules`, `/schedules`, `/alerts`, `/commands` (toàn cục), `/components`, `/admin/overview`, `/admin/logs`, `/admin/settings`, `PATCH /users/me`. http.js hiển thị lỗi rõ ràng khi backend chưa có API.
 
 ## Việc có thể làm tiếp (bạn trong nhóm đề xuất)
 1. Thêm trang Developer: Loại thiết bị, Loại linh kiện, Mẫu thiết bị + **Xuất JSON** cho firmware (API backend đã có: `/types`, `/component-models`, `/device-models`, `/device-models/:id/export`).
