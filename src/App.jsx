@@ -16,6 +16,9 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import AdminLayout from './components/AdminLayout.jsx';
 import AdminLogs from './pages/AdminLogs.jsx';
 import AdminSettings from './pages/AdminSettings.jsx';
+import DeveloperCatalog from './pages/DeveloperCatalog.jsx';
+import DeveloperDevices from './pages/DeveloperDevices.jsx';
+import DeveloperDiagnostics from './pages/DeveloperDiagnostics.jsx';
 import Profile from './pages/Profile.jsx';
 
 function StaffOnly({ children }) {
@@ -26,6 +29,11 @@ function StaffOnly({ children }) {
       <div className="alert-box alert-box-red">Bạn không có quyền truy cập trang này.</div>
     </div>
   );
+}
+
+function StaffRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={user?.role === 'developer' ? '/developer' : '/admin'} replace />;
 }
 
 function AdminOnly({ children }) {
@@ -47,7 +55,7 @@ export default function App() {
         <Route path="canh-bao" element={<Alerts />} />
         <Route path="lich-su" element={<ControlHistory />} />
         <Route path="thiet-bi" element={<PlacesDevices />} />
-        <Route path="quan-tri" element={<StaffOnly><Navigate to="/admin" replace /></StaffOnly>} />
+        <Route path="quan-tri" element={<StaffOnly><StaffRedirect /></StaffOnly>} />
         <Route path="ca-nhan" element={<Profile />} />
       </Route>
       <Route path="/admin" element={<AdminLayout />}>
@@ -56,6 +64,14 @@ export default function App() {
         <Route path="devices" element={<Admin />} />
         <Route path="logs" element={<AdminLogs />} />
         <Route path="settings" element={<AdminOnly><AdminSettings /></AdminOnly>} />
+      </Route>
+      <Route path="/developer" element={<AdminLayout />}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="catalog" element={<DeveloperCatalog />} />
+        <Route path="devices" element={<DeveloperDevices />} />
+        <Route path="diagnostics" element={<DeveloperDiagnostics />} />
+        <Route path="diagnostics/:deviceId" element={<DeveloperDiagnostics />} />
+        <Route path="logs" element={<AdminLogs />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -69,6 +69,7 @@ export const testAdminAlertChannel = (metric, channel) => post('/admin/settings/
 export const listTypes = () => get('/types');
 export const listComponentModels = () => get('/component-models');
 export const listDeviceModels = () => get('/device-models');
+export const exportDeviceModel = (id) => get(`/device-models/${id}/export`);
 
 // ---- vị trí
 export const listPlaces = () => get('/places');

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useAdminDashboard } from '../hooks/useAdminDashboard.js';
 import { Badge, Empty, Skeleton } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useAuth } from '../context/AuthContext.jsx';
 import { fmtTime } from '../utils/format.js';
 import './admin.css';
 
@@ -10,6 +12,13 @@ const METRICS = [
   { key: 'devices', label: 'Tổng số Thiết bị', icon: 'home', color: 'green' },
   { key: 'alerts', label: 'Cảnh báo hôm nay', icon: 'alert', color: 'amber' },
   { key: 'server', label: 'Sức khỏe máy chủ', icon: 'refresh', color: 'purple' },
+];
+
+const DEV_FILTERS = [
+  { key: 'overview', label: 'Tổng quan' },
+  { key: 'devices', label: 'Thiết bị' },
+  { key: 'alerts', label: 'Cảnh báo' },
+  { key: 'controls', label: 'Điều khiển' },
 ];
 
 function MetricCard({ metric, data }) {
@@ -191,20 +200,91 @@ function IncidentTable({ incidents }) {
   );
 }
 
+function DeveloperWorkspace({ data, filter, setFilter }) {
+  const cards = {
+    overview: [
+      { label: 'Thiết bị online', value: data.devices.online, detail: 'Đang gửi telemetry và phản hồi lệnh' },
+      { label: 'Thiết bị offline', value: data.devices.offline, detail: 'Cần kiểm tra kết nối / source điện' },
+      { label: 'Thiết bị chưa đăng ký', value: data.devices.unregistered, detail: 'Đang chờ mã đăng ký / cấp quyền' },
+      { label: 'Mức độ khỏe hệ thống', value: data.server.healthy ? 'Ổn định' : 'Cần xem xét', detail: data.server.avgLatencyMs == null ? 'Chưa có thông tin độ trễ' : `Độ trễ ~ ${data.server.avgLatencyMs} ms` },
+    ],
+    devices: [
+      { label: 'Tổng thiết bị', value: data.devices.total, detail: 'Đã tích hợp trong mock data' },
+      { label: 'Tỷ lệ online', value: `${Math.round((data.devices.online / Math.max(1, data.devices.total)) * 100)}%`, detail: 'Chỉ số hoạt động hiện tại' },
+      { label: 'Tổng người dùng', value: data.users.total, detail: 'Số tài khoản đang quản lý' },
+      { label: 'Tài khoản hoạt động', value: data.users.active, detail: 'Mức độ sử dụng hệ thống' },
+    ],
+    alerts: [
+      { label: 'Cảnh báo hôm nay', value: data.alertsToday, detail: 'Số sự cố được ghi nhận trong ngày' },
+      { label: 'Sự cố đang mở', value: data.incidents.filter((incident) => incident.status !== 'resolved').length, detail: 'Tình trạng cần theo dõi' },
+      { label: 'Độ trễ lệnh', value: data.server.avgLatencyMs == null ? '—' : `${data.server.avgLatencyMs} ms`, detail: 'Đánh giá thời gian phản hồi' },
+      { label: 'Trạng thái server', value: data.server.healthy ? 'Healthy' : 'Warning', detail: data.server.healthy ? 'Máy chủ đang ổn định' : 'Có dấu hiệu gián đoạn' },
+    ],
+    controls: [
+      { label: 'Lệnh thất bại', value: data.server.commandFailurePercent == null ? '—' : `${data.server.commandFailurePercent}%`, detail: 'Tỉ lệ lệnh không thực thi thành công' },
+      { label: 'Uptime thiết bị', value: data.server.deviceAvailabilityPercent == null ? '—' : `${data.server.deviceAvailabilityPercent}%`, detail: 'Thời gian thiết bị hoạt động' },
+      { label: 'Sự cố 7 ngày', value: data.incidentHistory.reduce((sum, day) => sum + day.total, 0), detail: 'Tổng số sự cố trong 7 ngày' },
+      { label: 'Lưu lượng MQTT', value: `${data.traffic.reduce((sum, item) => sum + (item.mqttIn || 0) + (item.mqttOut || 0), 0)}`, detail: 'Khối lượng tin nhắn hàng giờ' },
+    ],
+  };
+
+  return (
+    <section className="card admin-dev-panel">
+      <div className="card-head">
+        <div>
+          <h2 className="card-title">Developer dashboard</h2>
+          <p className="card-sub">Phân nhóm theo hệ thống, thiết bị, cảnh báo và điều khiển</p>
+        </div>
+      </div>
+      <div className="admin-dev-filters">
+        {DEV_FILTERS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={`admin-dev-filter${filter === item.key ? ' active' : ''}`}
+            onClick={() => setFilter(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="admin-dev-grid">
+        {cards[filter].map((card) => (
+          <article key={card.label} className="admin-dev-metric">
+            <div className="admin-dev-label">{card.label}</div>
+            <div className="admin-dev-value">{card.value}</div>
+            <div className="admin-dev-detail">{card.detail}</div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const { data, loading, error, reload } = useAdminDashboard();
+  const isDeveloper = user?.role === 'developer';
+  const [devFilter, setDevFilter] = useState('overview');
   return (
     <div className="page admin-page">
       <div className="page-head">
         <div>
-          <h1 className="page-title">Tổng quan Admin</h1>
-          <p className="page-sub">Giám sát hoạt động và sức khỏe toàn hệ thống SmartHome</p>
+          <h1 className="page-title">{isDeveloper ? 'Tổng quan Developer' : 'Tổng quan Admin'}</h1>
+          <p className="page-sub">
+            {isDeveloper
+              ? 'Theo dõi trạng thái thiết bị, lỗi điều khiển và số liệu vận hành để hỗ trợ triển khai SmartHome'
+              : 'Giám sát hoạt động và sức khỏe toàn hệ thống SmartHome'}
+          </p>
         </div>
         <button className="btn btn-outline" type="button" onClick={() => reload()} disabled={loading}>
           <Icon name="refresh" size={17} /> Làm mới
         </button>
       </div>
 
+      {isDeveloper && data && (
+        <DeveloperWorkspace data={data} filter={devFilter} setFilter={setDevFilter} />
+      )}
       {error && <div className="alert-box alert-box-red" role="alert">{error.message}</div>}
       {loading && !data ? (
         <div className="grid grid-4">{METRICS.map((metric) => <Skeleton key={metric.key} height={164} />)}</div>

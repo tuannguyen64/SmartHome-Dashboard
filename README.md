@@ -59,17 +59,22 @@ Thiết bị chưa đăng ký có mã ở **Quản trị → Thiết bị & mã 
 | `/admin/devices` | Danh sách thiết bị, nhân bản và mã đăng ký (admin/dev) |
 | `/admin/logs` | Audit đăng nhập, thay đổi cấu hình, lệnh phần cứng (admin/dev) |
 | `/admin/settings` | Cấu hình chính sách cảnh báo và sức khỏe server (chỉ admin) |
+| `/developer` | Dashboard giám sát dành riêng cho developer |
+| `/developer/catalog` | Tra cứu loại thiết bị, loại linh kiện, mẫu thiết bị và xuất cấu hình JSON cho firmware |
+| `/developer/devices` | Cấp mã, lọc kho thiết bị, xuất mã đăng ký CSV |
+| `/developer/diagnostics` | Chọn thiết bị để xem trạng thái kết nối, telemetry, linh kiện và lịch sử lệnh |
+| `/developer/logs` | Xem nhật ký hệ thống dành cho developer |
 | `/quan-tri` | Đường dẫn cũ, tự chuyển tới `/admin` |
 | `/ca-nhan` | Hồ sơ, Telegram chat ID, đổi mật khẩu | ✔ |
 
-## Giao diện quản trị `/admin`
+## Giao diện Admin và Developer
 
 ### Quyền truy cập và điều hướng
 
 - `admin`: toàn quyền với dashboard, quản lý tài khoản, thiết bị, audit log và cấu hình cảnh báo.
-- `developer`: xem dashboard, danh sách/cấp mã thiết bị và audit log; không được quản lý người dùng hoặc thay đổi cấu hình hệ thống.
+- `developer`: workspace riêng tại `/developer` gồm dashboard, danh mục phần cứng, cấp mã/kho thiết bị, chẩn đoán telemetry/lệnh và audit log; không được quản lý người dùng hoặc thay đổi cấu hình hệ thống.
 - `user`: tiếp tục dùng giao diện người dùng; không truy cập được các trang Admin.
-- Sau khi đăng nhập, tài khoản `admin` và `developer` được chuyển về `/admin`. Menu tài khoản cung cấp lối sang hồ sơ và các trang dành cho người dùng.
+- Sau khi đăng nhập, tài khoản `admin` được chuyển về `/admin`, `developer` về `/developer`. Menu tài khoản cung cấp lối sang hồ sơ và các trang dành cho người dùng.
 - `/quan-tri` là đường dẫn cũ và tự chuyển về khu vực `/admin`.
 
 ### Các màn hình

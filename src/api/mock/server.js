@@ -748,6 +748,38 @@ export function deleteUser(id) {
 export const listTypes = () => respond(() => (requireUser(), db.types));
 export const listComponentModels = () => respond(() => (requireUser(), db.component_models));
 export const listDeviceModels = () => respond(() => (requireUser(), db.device_models));
+export const exportDeviceModel = (id) => respond(() => {
+  const user = requireUser();
+  requireRole(user, ['admin', 'developer']);
+  const model = must(byId(db.device_models, id), 'mẫu thiết bị');
+  const type = byId(db.types, model.type_id);
+  const components = model.components.map((componentId) => {
+    const component = must(byId(db.component_models, componentId), 'loại linh kiện');
+    return {
+      component_model_id: component._id,
+      name: component.name,
+      label: component.label,
+      driver: component.driver,
+      kind: component.kind,
+      metric: component.metric,
+      unit: component.unit,
+      range: component.range,
+      min_start: component.min_start,
+      type: component.type,
+      description: component.description,
+    };
+  });
+  return {
+    device_model: {
+      _id: model._id,
+      name: model.name,
+      type: type ? { _id: type._id, name: type.name, code: type.code } : null,
+      buttons: model.buttons,
+      description: model.description,
+    },
+    components,
+  };
+});
 
 // ================================================================ API: vị trí (places)
 

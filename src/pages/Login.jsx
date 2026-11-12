@@ -8,10 +8,14 @@ import { isStaff } from '../utils/constants.js';
 import AuthShell from './AuthShell.jsx';
 
 // UC01-1 Đăng nhập (users.username + mật khẩu)
-const destinationFor = (user, requestedPath) =>
-  requestedPath?.startsWith('/') && !requestedPath.startsWith('//')
-    ? requestedPath
-    : isStaff(user) ? '/admin' : '/';
+const destinationFor = (user, requestedPath) => {
+  const home = user?.role === 'developer' ? '/developer' : user?.role === 'admin' ? '/admin' : '/';
+  const allowedPrefix = user?.role === 'developer' ? '/developer' : user?.role === 'admin' ? '/admin' : null;
+  const safeRequestedPath = requestedPath?.startsWith('/') && !requestedPath.startsWith('//');
+  if (!safeRequestedPath) return home;
+  if (!isStaff(user)) return requestedPath.startsWith('/admin') || requestedPath.startsWith('/developer') ? home : requestedPath;
+  return requestedPath === allowedPrefix || requestedPath.startsWith(`${allowedPrefix}/`) ? requestedPath : home;
+};
 
 export default function Login() {
   const { user, login } = useAuth();

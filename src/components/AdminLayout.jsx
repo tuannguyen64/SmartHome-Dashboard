@@ -8,15 +8,15 @@ import { FigmaIcon, Icon } from './icons.jsx';
 import SimPanel from './SimPanel.jsx';
 import { Spinner } from './ui.jsx';
 
-const ADMIN_NAV = [
-  { to: '/admin', label: 'Tổng quan Admin', end: true },
-  { to: '/admin/users', label: 'Quản lý User', role: 'admin' },
-  { to: '/admin/devices', label: 'Thiết bị & Bo mạch' },
-  { to: '/admin/logs', label: 'Nhật ký Hệ thống' },
-  { to: '/admin/settings', label: 'Cấu hình Cảnh báo & Server', role: 'admin' },
+const ADMIN_NAV = (base) => [
+  { to: base, label: 'Tổng quan Admin', end: true },
+  { to: `${base}/users`, label: 'Quản lý User', role: 'admin' },
+  { to: `${base}/devices`, label: 'Thiết bị & Bo mạch' },
+  { to: `${base}/logs`, label: 'Nhật ký Hệ thống' },
+  { to: `${base}/settings`, label: 'Cấu hình Cảnh báo & Server', role: 'admin' },
 ];
 
-function AdminShell() {
+function AdminShell({ base, isDeveloper }) {
   const { user, logout } = useAuth();
   const { connected } = useRealtimeStatus();
   const navigate = useNavigate();
@@ -25,7 +25,15 @@ function AdminShell() {
   const accountRef = useRef(null);
   const name = user?.full_name || user?.username || 'Quản trị viên';
   const initial = name.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || 'A';
-  const nav = ADMIN_NAV.filter((item) => !item.role || item.role === user?.role);
+  const nav = isDeveloper
+    ? [
+      { to: base, label: 'Tổng quan Developer', end: true },
+      { to: `${base}/catalog`, label: 'Danh mục phần cứng' },
+      { to: `${base}/devices`, label: 'Triển khai thiết bị' },
+      { to: `${base}/diagnostics`, label: 'Chẩn đoán' },
+      { to: `${base}/logs`, label: 'Nhật ký Hệ thống' },
+    ]
+    : ADMIN_NAV(base).filter((item) => !item.role || item.role === user?.role);
 
   useEffect(() => {
     setAccountMenuOpen(false);
@@ -43,7 +51,7 @@ function AdminShell() {
     <>
       <header className="admin-hdr">
         <div className="admin-hdr-inner">
-          <NavLink to="/admin" className="hdr-brand">
+          <NavLink to={base} className="hdr-brand">
             <span className="hdr-logo"><FigmaIcon name="house" size={17} /></span>
             <span>SmartHome</span>
           </NavLink>
@@ -59,7 +67,7 @@ function AdminShell() {
               <span className="dot" />
               <span className="admin-connection-label">{connected ? 'Đang kết nối' : 'Mất kết nối'}</span>
             </span>
-            <NavLink to="/admin/logs" className="admin-bell" aria-label="Mở nhật ký hệ thống">
+            <NavLink to={`${base}/logs`} className="admin-bell" aria-label="Mở nhật ký hệ thống">
               <FigmaIcon name="bell" size={36} />
             </NavLink>
             <div className="admin-account" ref={accountRef}>
@@ -90,8 +98,8 @@ function AdminShell() {
                   <Link to="/thiet-bi" role="menuitem">
                     <Icon name="home" size={16} /> Vị trí và thiết bị
                   </Link>
-                  <Link to="/admin" role="menuitem">
-                    <Icon name="sliders" size={16} /> Bảng điều khiển Admin
+                  <Link to={base} role="menuitem">
+                    <Icon name="sliders" size={16} /> {user?.role === 'developer' ? 'Bảng điều khiển Developer' : 'Bảng điều khiển Admin'}
                   </Link>
                   <button
                     className="danger"
@@ -120,6 +128,8 @@ function AdminShell() {
 export default function AdminLayout() {
   const { user, ready } = useAuth();
   const location = useLocation();
+  const isDeveloper = user?.role === 'developer';
+  const base = isDeveloper ? '/developer' : '/admin';
 
   if (!ready) {
     return <div className="empty" style={{ height: '100vh' }}><Spinner /></div>;
@@ -130,5 +140,8 @@ export default function AdminLayout() {
   if (!isStaff(user)) {
     return <div className="page"><div className="alert-box alert-box-red">Bạn không có quyền truy cập khu vực quản trị.</div></div>;
   }
-  return <RealtimeProvider><AdminShell /></RealtimeProvider>;
+  if ((isDeveloper && !location.pathname.startsWith('/developer')) || (!isDeveloper && location.pathname.startsWith('/developer'))) {
+    return <Navigate to={base} replace />;
+  }
+  return <RealtimeProvider><AdminShell base={base} isDeveloper={isDeveloper} /></RealtimeProvider>;
 }
