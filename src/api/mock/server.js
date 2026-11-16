@@ -22,7 +22,32 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const d = JSON.parse(raw);
-      if (d.version === SEED_VERSION) return d;
+      if (d.version === SEED_VERSION) {
+        d.audit_logs ??= [];
+        d.system_settings ??= {
+          offline_after_seconds: PARAMS.OFFLINE_AFTER_S,
+          alert_cooldown_minutes: PARAMS.ALERT_COOLDOWN_MS / 60000,
+          remind_after_minutes: PARAMS.REMIND_AFTER_MS / 60000,
+          audit_retention_days: PARAMS.RETENTION_DAYS,
+          alert_rules: [
+            { metric: 'temperature', min: null, max: 32, severity: 'warning', channels: ['dashboard'] },
+            { metric: 'humidity', min: 40, max: 80, severity: 'warning', channels: ['dashboard'] },
+            { metric: 'light', min: null, max: 90, severity: 'warning', channels: ['dashboard'] },
+          ],
+        };
+        d.system_settings.audit_retention_days ??= PARAMS.RETENTION_DAYS;
+        d.system_settings.alert_rules ??= [
+          { metric: 'temperature', min: null, max: 32, severity: 'warning', channels: ['dashboard'] },
+          { metric: 'humidity', min: 40, max: 80, severity: 'warning', channels: ['dashboard'] },
+          { metric: 'light', min: null, max: 90, severity: 'warning', channels: ['dashboard'] },
+        ];
+        d.system_settings.alert_rules = d.system_settings.alert_rules.map((rule) =>
+          rule.metric === 'light' && rule.min == null && rule.max == null ? { ...rule, max: 90 } : rule,
+        );
+        d.users.forEach((user) => { user.email ??= `${user.username}@smarthome.local`; });
+        d.system_alert_states ??= {};
+        return d;
+      }
     }
   } catch {
     /* tạo mới */
@@ -71,6 +96,22 @@ const now = () => Date.now();
 const iso = (t = now()) => new Date(t).toISOString();
 const clone = (x) => structuredClone(x);
 const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms + Math.random() * 100));
+function writeAudit({ action, level = 'info', userId = null, username = null, deviceId = null, details = '' }) {
+  const cutoff = now() - systemSettings().audit_retention_days * 86400e3;
+  db.audit_logs = db.audit_logs.filter((entry) => new Date(entry.created_at).getTime() >= cutoff);
+  db.audit_logs.unshift({
+    _id: oid(),
+    action,
+    level,
+    user_id: userId,
+    username,
+    device_id: deviceId,
+    details,
+    created_at: iso(),
+  });
+  if (db.audit_logs.length > 3000) db.audit_logs.length = 3000;
+}
+const systemSettings = () => db.system_settings;
 
 let started = false;
 async function respond(fn, ms) {
@@ -91,7 +132,7 @@ const must = (x, what) => {
 const cmOf = (c) => byId(db.component_models, c.component_model_id);
 const deviceOf = (c) => byId(db.devices, c.device_id);
 const compsOf = (d) => db.components.filter((c) => c.device_id === d._id);
-const isOnline = (d) => !!d.last_seen && now() - new Date(d.last_seen).getTime() < PARAMS.OFFLINE_AFTER_S * 1000;
+const isOnline = (d) => !!d.last_seen && now() - new Date(d.last_seen).getTime() < systemSettings().offline_after_seconds * 1000;
 const placeName = (id) => byId(db.places, id)?.name ?? '';
 const pub = ({ password, failed_attempts, locked_until, ...u }) => u;
 
@@ -326,6 +367,56 @@ function raiseControlFailed(c, by) {
   });
 }
 
+function evaluateSystemAlertRules(c, v) {
+  const cm = cmOf(c);
+  const device = deviceOf(c);
+  const rule = systemSettings().alert_rules.find((item) => item.metric === cm.metric && (item.min != null || item.max != null));
+  if (!rule || cm.kind !== 'sensor') return;
+  const key = `${c._id}:${rule.metric}`;
+  const state = (db.system_alert_states[key] ||= { count: 0, alert_id: null, last_resolved_at: null });
+  const active = state.alert_id ? db.alerts.find((alert) => alert._id === state.alert_id && alert.status !== 'resolved') : null;
+  if (state.alert_id && !active) state.alert_id = null;
+  const breached = rule.min != null && v < rule.min ? 'min' : rule.max != null && v > rule.max ? 'max' : null;
+  const hysteresis = metricInfo(cm.metric).hysteresis ?? 1;
+  if (breached) {
+    state.count += 1;
+    const threshold = breached === 'min' ? rule.min : rule.max;
+    if (active) {
+      active.value = v;
+      active.worst_value = breached === 'min' ? Math.min(active.worst_value, v) : Math.max(active.worst_value, v);
+      emit('alert', active);
+    } else if (state.count >= PARAMS.BREACH_COUNT) {
+      const cooldown = state.last_resolved_at && now() - new Date(state.last_resolved_at).getTime() < systemSettings().alert_cooldown_minutes * 60000;
+      const alert = newAlert({
+        type: 'threshold',
+        system_rule: true,
+        place_id: device.place_id,
+        component_id: c._id,
+        device_ids: [device._id],
+        metric: cm.metric,
+        value: v,
+        worst_value: v,
+        threshold: { min: rule.min, max: rule.max, breached },
+        severity: rule.severity,
+        message: `${placeName(device.place_id) || device.device_name}: ${cm.label.toLowerCase()} ${v} ${cm.unit} ${breached === 'min' ? 'dưới ngưỡng dưới' : 'vượt ngưỡng trên'} ${threshold} ${cm.unit} (cấu hình hệ thống)`,
+        deliveries: deliver(rule.channels, { cooldown }),
+      });
+      state.alert_id = alert._id;
+    }
+    return;
+  }
+
+  state.count = 0;
+  if (active) {
+    const safe = active.threshold.breached === 'min' ? rule.min == null || v >= rule.min + hysteresis : rule.max == null || v <= rule.max - hysteresis;
+    if (safe) {
+      resolveAlert(active, 'Giá trị đã trở lại an toàn');
+      state.alert_id = null;
+      state.last_resolved_at = iso();
+    }
+  }
+}
+
 function evaluateRules(c, v) {
   const cm = cmOf(c);
   const h = metricInfo(cm.metric).hysteresis ?? 1;
@@ -345,7 +436,7 @@ function evaluateRules(c, v) {
           open.worst_value = breached === 'max' ? Math.max(open.worst_value, v) : Math.min(open.worst_value, v);
           emit('alert', open);
         } else if (st.count >= PARAMS.BREACH_COUNT) {
-          const cooldown = st.last_resolved_at && now() - new Date(st.last_resolved_at).getTime() < PARAMS.ALERT_COOLDOWN_MS;
+          const cooldown = st.last_resolved_at && now() - new Date(st.last_resolved_at).getTime() < systemSettings().alert_cooldown_minutes * 60000;
           const limit = breached === 'max' ? rule.max : rule.min;
           const a = newAlert({
             rule_id: rule._id, place_id: d.place_id, component_id: c._id, device_ids: [d._id], metric: cm.metric,
@@ -355,6 +446,7 @@ function evaluateRules(c, v) {
           });
           st.alert_id = a._id;
         }
+
         // auto_action: khi điều kiện chuyển từ sai sang đúng
         if (rule.auto_action?.enabled && !st.auto_active && st.count >= 1) {
           const target = byId(db.components, rule.auto_action.component_id);
@@ -401,6 +493,7 @@ function ingest(c, v) {
   c.value_at = iso();
   emit('component', componentView(c));
   evaluateRules(c, v);
+  evaluateSystemAlertRules(c, v);
 }
 
 function readingsTick() {
@@ -443,7 +536,7 @@ function offlineTick() {
     });
   // Nhắc lại cảnh báo chưa xác nhận sau 15 phút
   db.alerts.forEach((a) => {
-    if (a.status === 'active' && !a.reminded_at && now() - new Date(a.triggered_at).getTime() > PARAMS.REMIND_AFTER_MS) {
+    if (a.status === 'active' && !a.reminded_at && now() - new Date(a.triggered_at).getTime() > systemSettings().remind_after_minutes * 60000) {
       a.reminded_at = iso();
       a.deliveries.push({ channel: 'dashboard', status: 'sent', attempts: 1, sent_at: iso(), note: 'Nhắc lại' });
       emit('alert', a);
@@ -490,9 +583,13 @@ export function login(username, password) {
     const u = db.users.find((x) => x.username === String(username).trim());
     if (u?.locked_until && new Date(u.locked_until).getTime() > now()) {
       const mins = Math.ceil((new Date(u.locked_until).getTime() - now()) / 60000);
+      writeAudit({ action: 'auth.login.blocked', level: 'warn', userId: u._id, username: u.username, details: 'Tài khoản đang bị khóa tạm thời' });
+      save();
       throw new ApiError(`Tài khoản tạm khóa do nhập sai nhiều lần. Thử lại sau ${mins} phút.`, 'locked');
     }
     if (!u || u.password !== fakeHash(password)) {
+      writeAudit({ action: 'auth.login.failed', level: 'error', userId: u?._id, username: u?.username ?? String(username).trim(), details: 'Tên đăng nhập hoặc mật khẩu không hợp lệ' });
+      save();
       if (u) {
         u.failed_attempts = (u.failed_attempts || 0) + 1;
         if (u.failed_attempts >= PARAMS.LOGIN_MAX_FAILS) {
@@ -510,6 +607,7 @@ export function login(username, password) {
     u.locked_until = null;
     const token = oid() + oid();
     db.tokens[token] = u._id;
+    writeAudit({ action: 'auth.login.success', userId: u._id, username: u.username, details: 'Đăng nhập thành công' });
     return { accessToken: token, user: pub(u) };
   }, 350);
 }
@@ -527,6 +625,7 @@ export function register({ username, password, full_name, telegram_chat_id }) {
       telegram_chat_id: telegram_chat_id || null, is_active: true, failed_attempts: 0, locked_until: null, created_at: iso(),
     };
     db.users.push(u);
+    writeAudit({ action: 'auth.register', userId: u._id, username: u.username, details: 'Tài khoản người dùng mới được đăng ký' });
     const token = oid() + oid();
     db.tokens[token] = u._id;
     return { accessToken: token, user: pub(u) };
@@ -549,6 +648,7 @@ export function updateMe({ full_name, telegram_chat_id }) {
       u.full_name = full_name.trim();
     }
     if (telegram_chat_id !== undefined) u.telegram_chat_id = telegram_chat_id || null;
+    writeAudit({ action: 'user.profile.updated', userId: u._id, username: u.username, details: 'Cập nhật thông tin hồ sơ' });
     return pub(u);
   });
 }
@@ -559,32 +659,45 @@ export function changePassword(current_password, new_password) {
     if (u.password !== fakeHash(current_password)) throw new ApiError('Mật khẩu hiện tại không đúng', 'validation', { fields: { current_password: 'Không đúng' } });
     if ((new_password ?? '').length < 6) throw new ApiError('Mật khẩu mới tối thiểu 6 ký tự', 'validation', { fields: { new_password: 'Tối thiểu 6 ký tự' } });
     u.password = fakeHash(new_password);
+    writeAudit({ action: 'user.password_changed', userId: u._id, username: u.username, details: 'Đổi mật khẩu cá nhân' });
     return { ok: true };
   }, 300);
 }
 
 // ================================================================ API: quản trị tài khoản (admin)
 
-export function listUsers({ search = '', role = '', page: p = 1, limit = 10 } = {}) {
+export function listUsers({ search = '', role = '', status = '', page: p = 1, limit = 10 } = {}) {
   return respond(() => {
     requireRole(requireUser(), ['admin']);
     const s = search.toLowerCase();
-    const list = db.users.filter((u) => (!role || u.role === role) && (!s || u.username.toLowerCase().includes(s) || u.full_name.toLowerCase().includes(s)));
-    return page(list.map(pub), { page: p, limit });
+    const counts = new Map();
+    db.devices.forEach((device) => {
+      if (device.owner_id) counts.set(device.owner_id, (counts.get(device.owner_id) ?? 0) + 1);
+    });
+    const list = db.users.filter((u) =>
+      (!role || u.role === role)
+      && (!status || (status === 'active') === (u.is_active !== false))
+      && (!s || u.username.toLowerCase().includes(s) || u.full_name.toLowerCase().includes(s) || (u.email ?? '').toLowerCase().includes(s)),
+    );
+    return page(list.map((user) => ({ ...pub(user), device_count: counts.get(user._id) ?? 0 })), { page: p, limit });
   });
 }
 
 export function createUser(body) {
   return respond(() => {
-    requireRole(requireUser(), ['admin']);
+    const actor = requireUser();
+    requireRole(actor, ['admin']);
     if (!/^[a-z0-9_.]{3,}$/i.test(body.username ?? '')) throw new ApiError('Tên đăng nhập tối thiểu 3 ký tự', 'validation', { fields: { username: 'Không hợp lệ' } });
     if ((body.password ?? '').length < 6) throw new ApiError('Mật khẩu tối thiểu 6 ký tự', 'validation', { fields: { password: 'Tối thiểu 6 ký tự' } });
     if (db.users.some((u) => u.username === body.username)) throw new ApiError('Tên đăng nhập đã tồn tại', 'conflict', { fields: { username: 'Đã tồn tại' } });
+    if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) throw new ApiError('Email không hợp lệ', 'validation', { fields: { email: 'Email không hợp lệ' } });
+    if (body.email && db.users.some((u) => u.email?.toLowerCase() === body.email.toLowerCase())) throw new ApiError('Email đã được sử dụng', 'conflict', { fields: { email: 'Đã tồn tại' } });
     const u = {
       _id: oid(), username: body.username, password: fakeHash(body.password), full_name: body.full_name || body.username,
-      role: body.role || 'user', telegram_chat_id: body.telegram_chat_id || null, is_active: true, failed_attempts: 0, locked_until: null, created_at: iso(),
+      email: body.email || null, role: body.role || 'user', telegram_chat_id: body.telegram_chat_id || null, is_active: true, failed_attempts: 0, locked_until: null, created_at: iso(),
     };
     db.users.push(u);
+    writeAudit({ action: 'user.created', userId: actor._id, username: actor.username, details: `Tạo tài khoản ${u.username} với vai trò ${u.role}` });
     return pub(u);
   });
 }
@@ -595,19 +708,24 @@ export function updateUser(id, body) {
     requireRole(me, ['admin']);
     const u = must(byId(db.users, id), 'tài khoản');
     if (id === me._id && body.role && body.role !== 'admin') throw new ApiError('Không thể tự hạ quyền của chính mình', 'validation');
-    for (const k of ['full_name', 'role', 'telegram_chat_id', 'is_active']) if (k in body) u[k] = body[k];
+    if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) throw new ApiError('Email không hợp lệ', 'validation', { fields: { email: 'Email không hợp lệ' } });
+    if (body.email && db.users.some((user) => user._id !== id && user.email?.toLowerCase() === body.email.toLowerCase())) throw new ApiError('Email đã được sử dụng', 'conflict', { fields: { email: 'Đã tồn tại' } });
+    for (const k of ['full_name', 'email', 'role', 'telegram_chat_id', 'is_active']) if (k in body) u[k] = body[k];
     if (body.is_active === true) u.locked_until = null;
+    writeAudit({ action: 'user.updated', userId: me._id, username: me.username, details: `Cập nhật tài khoản ${u.username}: ${Object.keys(body).join(', ')}` });
     return pub(u);
   });
 }
 
 export function resetUserPassword(id, new_password) {
   return respond(() => {
-    requireRole(requireUser(), ['admin']);
+    const actor = requireUser();
+    requireRole(actor, ['admin']);
     if ((new_password ?? '').length < 6) throw new ApiError('Mật khẩu tối thiểu 6 ký tự', 'validation');
     const u = must(byId(db.users, id), 'tài khoản');
     u.password = fakeHash(new_password);
     u.locked_until = null;
+    writeAudit({ action: 'user.password_reset', userId: actor._id, username: actor.username, details: `Đặt lại mật khẩu cho ${u.username}` });
     return { ok: true };
   });
 }
@@ -616,10 +734,12 @@ export function deleteUser(id) {
   return respond(() => {
     const me = requireUser();
     requireRole(me, ['admin']);
+    const removedUser = must(byId(db.users, id), 'tài khoản');
     if (id === me._id) throw new ApiError('Không thể xóa chính mình', 'validation');
     db.users = db.users.filter((u) => u._id !== id);
     Object.keys(db.tokens).forEach((k) => db.tokens[k] === id && delete db.tokens[k]);
     db.devices.forEach((d) => (d.shared_with = d.shared_with.filter((x) => x !== id)));
+    writeAudit({ action: 'user.deleted', userId: me._id, username: me.username, details: `Xóa tài khoản ${removedUser.username}` });
   });
 }
 
@@ -628,6 +748,38 @@ export function deleteUser(id) {
 export const listTypes = () => respond(() => (requireUser(), db.types));
 export const listComponentModels = () => respond(() => (requireUser(), db.component_models));
 export const listDeviceModels = () => respond(() => (requireUser(), db.device_models));
+export const exportDeviceModel = (id) => respond(() => {
+  const user = requireUser();
+  requireRole(user, ['admin', 'developer']);
+  const model = must(byId(db.device_models, id), 'mẫu thiết bị');
+  const type = byId(db.types, model.type_id);
+  const components = model.components.map((componentId) => {
+    const component = must(byId(db.component_models, componentId), 'loại linh kiện');
+    return {
+      component_model_id: component._id,
+      name: component.name,
+      label: component.label,
+      driver: component.driver,
+      kind: component.kind,
+      metric: component.metric,
+      unit: component.unit,
+      range: component.range,
+      min_start: component.min_start,
+      type: component.type,
+      description: component.description,
+    };
+  });
+  return {
+    device_model: {
+      _id: model._id,
+      name: model.name,
+      type: type ? { _id: type._id, name: type.name, code: type.code } : null,
+      buttons: model.buttons,
+      description: model.description,
+    },
+    components,
+  };
+});
 
 // ================================================================ API: vị trí (places)
 
@@ -724,24 +876,343 @@ export function myDevices() {
   }, 80);
 }
 
-export function listDevices({ search = '', registered = '', page: p = 1, limit = 10 } = {}) {
+export function listDevices({ search = '', registered = '', status = '', type_id, place_id, page: p = 1, limit = 10 } = {}) {
   return respond(() => {
     requireRole(requireUser(), ['admin', 'developer']);
     const s = search.toLowerCase();
-    const list = db.devices.filter(
-      (d) => (!s || d.device_name.toLowerCase().includes(s)) && (registered === '' || (registered === 'true') === !!d.owner_id),
-    );
-    return page(list.map(withOnline), { page: p, limit });
+    const paths = placePaths(db.places);
+    const userById = new Map(db.users.map((user) => [user._id, user]));
+    const placeById = new Map(db.places.map((place) => [place._id, place]));
+    const modelsById = new Map(db.device_models.map((model) => [model._id, model]));
+    const typesById = new Map(db.types.map((type) => [type._id, type]));
+    const list = db.devices.filter((device) =>
+      (!s || `${device.device_name} ${userById.get(device.owner_id)?.full_name ?? ''} ${userById.get(device.owner_id)?.username ?? ''} ${userById.get(device.owner_id)?.email ?? ''} ${device._id}`.toLowerCase().includes(s))
+      && (registered === '' || (registered === 'true') === !!device.owner_id)
+      && (!status || (status === 'unregistered' ? !device.owner_id : !!device.owner_id && (status === 'online') === isOnline(device)))
+      && (!type_id || device.type_id === type_id)
+      && (!place_id || device.place_id === place_id || placeById.get(device.place_id)?.ancestors?.includes(place_id)),
+    ).map((device) => ({
+      ...withOnline(device),
+      owner_name: userById.get(device.owner_id)?.full_name ?? null,
+      owner_username: userById.get(device.owner_id)?.username ?? null,
+      place_path: paths.get(device.place_id) ?? null,
+      model_name: modelsById.get(device.device_model_id)?.name ?? null,
+      type_name: typesById.get(device.type_id)?.name ?? null,
+    }));
+    return {
+      ...page(list, { page: p, limit }),
+      filters: {
+        types: db.types.map((type) => ({ id: type._id, name: type.name })),
+        places: db.places.map((place) => ({ id: place._id, name: paths.get(place._id) })),
+      },
+    };
   });
+}
+
+export function adminOverview() {
+  return respond(() => {
+    requireRole(requireUser(), ['admin', 'developer']);
+    const timestamp = now();
+    const users = db.users;
+    const devices = db.devices;
+    const userById = new Map(users.map((u) => [u._id, u]));
+    const deviceById = new Map(devices.map((d) => [d._id, d]));
+    const vnNow = new Date(timestamp + 7 * 60 * 60 * 1000);
+    vnNow.setUTCHours(0, 0, 0, 0);
+    const todayStart = vnNow.getTime() - 7 * 60 * 60 * 1000;
+    const alertsToday = db.alerts.filter((a) => new Date(a.triggered_at).getTime() >= todayStart).length;
+    const recentLatencies = db.commands
+      .filter((c) => c.latency_ms != null && timestamp - new Date(c.sent_at).getTime() <= 24 * 60 * 60 * 1000)
+      .map((c) => c.latency_ms);
+    const commandsLastDay = db.commands.filter((c) => timestamp - new Date(c.sent_at).getTime() <= 24 * 60 * 60 * 1000);
+    const failedCommands = commandsLastDay.filter((c) => c.status === 'failed');
+    const onlineDevices = devices.filter((d) => d.owner_id && isOnline(d)).length;
+    const registeredDevices = devices.filter((d) => d.owner_id);
+    const incidents = new Map();
+    const sensorGroups = new Map();
+    db.components.forEach((component) => {
+      const model = byId(db.component_models, component.component_model_id);
+      const device = deviceById.get(component.device_id);
+      if (model?.kind !== 'sensor' || component.value == null || !device || !isOnline(device) || !Number.isFinite(Number(component.value))) return;
+      const group = sensorGroups.get(model.metric) ?? { metric: model.metric, label: model.label, unit: model.unit, total: 0, count: 0 };
+      group.total += Number(component.value);
+      group.count += 1;
+      sensorGroups.set(model.metric, group);
+    });
+
+    registeredDevices.filter((d) => !isOnline(d)).forEach((d) => {
+      incidents.set(d._id, {
+        id: d._id,
+        deviceName: d.device_name,
+        ownerName: userById.get(d.owner_id)?.full_name ?? 'Không rõ',
+        placeName: placeName(d.place_id) || 'Chưa có vị trí',
+        status: 'offline',
+        message: d.last_seen ? `Mất kết nối từ ${Math.max(1, Math.floor((timestamp - new Date(d.last_seen).getTime()) / 60000))} phút trước` : 'Chưa ghi nhận lần kết nối',
+        updatedAt: d.last_seen,
+      });
+    });
+    db.alerts.filter((a) => a.status === 'active').forEach((a) => {
+      const relatedDevices = a.device_ids.map((id) => deviceById.get(id)).filter(Boolean);
+      if (!relatedDevices.length) {
+        incidents.set(`alert:${a._id}`, {
+          id: a._id,
+          deviceName: 'Toàn hệ thống',
+          ownerName: '—',
+          placeName: placeName(a.place_id) || 'Hệ thống',
+          status: a.severity === 'danger' ? 'critical' : 'warning',
+          message: a.message,
+          updatedAt: a.triggered_at,
+        });
+        return;
+      }
+      relatedDevices.forEach((d) => {
+        incidents.set(d._id, {
+          id: d._id,
+          deviceName: d.device_name,
+          ownerName: userById.get(d.owner_id)?.full_name ?? 'Không rõ',
+          placeName: placeName(a.place_id ?? d.place_id) || 'Chưa có vị trí',
+          status: a.severity === 'danger' ? 'critical' : 'warning',
+          message: a.message,
+          updatedAt: a.triggered_at,
+        });
+      });
+    });
+
+    const traffic = Array.from({ length: 12 }, (_, index) => {
+      const bucketStart = timestamp - (11 - index) * 60 * 60 * 1000;
+      const bucketEnd = bucketStart + 60 * 60 * 1000;
+      const hourCommands = db.commands.filter((c) => {
+        const sent = new Date(c.sent_at).getTime();
+        return sent >= bucketStart && sent < bucketEnd;
+      });
+      const hour = new Date(bucketStart + 7 * 60 * 60 * 1000).getUTCHours();
+      return {
+        label: `${String(hour).padStart(2, '0')}:00`,
+        mqttOut: hourCommands.length,
+        mqttIn: hourCommands.filter((c) => c.latency_ms != null).length,
+        httpRequests: Math.max(0, users.length + registeredDevices.length + ((hour * 7 + users.length) % 9)),
+      };
+    });
+    const latencyHistory = Array.from({ length: 12 }, (_, index) => {
+      const bucketStart = timestamp - (11 - index) * 60 * 60 * 1000;
+      const bucketEnd = bucketStart + 60 * 60 * 1000;
+      const bucketCommands = db.commands.filter((command) => {
+        const sent = new Date(command.sent_at).getTime();
+        return sent >= bucketStart && sent < bucketEnd && command.latency_ms != null;
+      });
+      const hour = new Date(bucketStart + 7 * 60 * 60 * 1000).getUTCHours();
+      return {
+        label: `${String(hour).padStart(2, '0')}:00`,
+        latencyMs: bucketCommands.length ? Math.round(bucketCommands.reduce((sum, command) => sum + command.latency_ms, 0) / bucketCommands.length) : null,
+        commands: bucketCommands.length,
+      };
+    });
+    const incidentHistory = Array.from({ length: 7 }, (_, index) => {
+      const dayStart = new Date(timestamp + 7 * 60 * 60 * 1000);
+      dayStart.setUTCHours(0, 0, 0, 0);
+      dayStart.setUTCDate(dayStart.getUTCDate() - (6 - index));
+      const start = dayStart.getTime() - 7 * 60 * 60 * 1000;
+      const end = start + 86400e3;
+      const incidents = db.alerts.filter((alert) => {
+        const triggered = new Date(alert.triggered_at).getTime();
+        return triggered >= start && triggered < end;
+      });
+      return {
+        label: `${String(dayStart.getUTCDate()).padStart(2, '0')}/${String(dayStart.getUTCMonth() + 1).padStart(2, '0')}`,
+        total: incidents.length,
+        active: incidents.filter((alert) => alert.status === 'active').length,
+      };
+    });
+
+    return {
+      users: { total: users.length, active: users.filter((u) => u.is_active !== false).length },
+      devices: {
+        total: devices.length,
+        online: onlineDevices,
+        offline: Math.max(0, registeredDevices.length - onlineDevices),
+        unregistered: devices.length - registeredDevices.length,
+      },
+      sensors: [...sensorGroups.values()].map(({ metric, label, unit, total, count }) => ({
+        metric,
+        label,
+        unit,
+        average: Math.round((total / count) * 10) / 10,
+        count,
+      })),
+      alertsToday,
+      server: {
+        healthy: sim.socket && sim.broker,
+        avgLatencyMs: recentLatencies.length ? Math.round(recentLatencies.reduce((sum, value) => sum + value, 0) / recentLatencies.length) : null,
+        deviceAvailabilityPercent: registeredDevices.length ? Math.round((onlineDevices / registeredDevices.length) * 1000) / 10 : null,
+        commandFailurePercent: commandsLastDay.length ? Math.round((failedCommands.length / commandsLastDay.length) * 1000) / 10 : null,
+        commandCount24h: commandsLastDay.length,
+        failedCommandCount24h: failedCommands.length,
+      },
+      incidents: [...incidents.values()].sort((a, b) => new Date(b.updatedAt ?? 0) - new Date(a.updatedAt ?? 0)).slice(0, 8),
+      traffic,
+      latencyHistory,
+      incidentHistory,
+    };
+  }, 80);
+}
+
+export function getAdminSettings() {
+  return respond(() => {
+    requireRole(requireUser(), ['admin']);
+    const metrics = [...new Map(db.component_models.filter((model) => model.kind === 'sensor').map((model) => [model.metric, { metric: model.metric, label: model.label, unit: model.unit, range: model.range }])).values()];
+    return { ...systemSettings(), alert_rules: systemSettings().alert_rules.map((rule) => ({ ...rule, channels: [...rule.channels] })), metrics };
+  }, 50);
+}
+
+export function updateAdminSettings(input) {
+  return respond(() => {
+    const actor = requireUser();
+    requireRole(actor, ['admin']);
+    const fields = {};
+    const values = {
+      offline_after_seconds: Number(input.offline_after_seconds),
+      alert_cooldown_minutes: Number(input.alert_cooldown_minutes),
+      remind_after_minutes: Number(input.remind_after_minutes),
+      audit_retention_days: Number(input.audit_retention_days),
+    };
+    const ranges = {
+      offline_after_seconds: [30, 3600],
+      alert_cooldown_minutes: [1, 1440],
+      remind_after_minutes: [1, 1440],
+      audit_retention_days: [30, 3650],
+    };
+    Object.entries(values).forEach(([key, value]) => {
+      const [min, max] = ranges[key];
+      if (!Number.isInteger(value) || value < min || value > max) fields[key] = `Nhập số nguyên từ ${min} đến ${max}`;
+    });
+    const metricModels = new Map(db.component_models.filter((model) => model.kind === 'sensor').map((model) => [model.metric, model]));
+    const allowedChannels = new Set(['dashboard', 'telegram', 'lcd']);
+    const alertRules = Array.isArray(input.alert_rules) ? input.alert_rules : [];
+    if (alertRules.length !== metricModels.size) fields.alert_rules = 'Cần cấu hình đủ các loại cảm biến trong hệ thống';
+    const seenMetrics = new Set();
+    alertRules.forEach((rule) => {
+      const model = metricModels.get(rule.metric);
+      if (!model || seenMetrics.has(rule.metric)) {
+        fields.alert_rules = 'Loại cảm biến không hợp lệ hoặc bị lặp';
+        return;
+      }
+      seenMetrics.add(rule.metric);
+      const min = rule.min == null || rule.min === '' ? null : Number(rule.min);
+      const max = rule.max == null || rule.max === '' ? null : Number(rule.max);
+      if (!['warning', 'danger'].includes(rule.severity)) fields.alert_rules = `${model.label}: mức độ không hợp lệ`;
+      if ((min == null && max == null) || (min != null && !Number.isFinite(min)) || (max != null && !Number.isFinite(max))) {
+        fields.alert_rules = 'Mỗi loại cảm biến cần ít nhất một ngưỡng hợp lệ';
+      }
+      if (model.range && ((min != null && (min < model.range.min || min > model.range.max)) || (max != null && (max < model.range.min || max > model.range.max)))) {
+        fields.alert_rules = `${model.label}: ngưỡng phải trong khoảng ${model.range.min} đến ${model.range.max}`;
+      }
+      if (min != null && max != null && min >= max) fields.alert_rules = `${model.label}: ngưỡng dưới phải nhỏ hơn ngưỡng trên`;
+      if (!Array.isArray(rule.channels) || !rule.channels.length || rule.channels.some((channel) => !allowedChannels.has(channel))) {
+        fields.alert_rules = `${model.label}: chọn ít nhất một kênh hợp lệ`;
+      }
+    });
+    if (Object.keys(fields).length) throw new ApiError('Cấu hình chưa hợp lệ', 'validation', { fields });
+
+    const previous = { ...systemSettings() };
+    Object.assign(systemSettings(), values, {
+      alert_rules: alertRules.map((rule) => ({
+        metric: rule.metric,
+        min: rule.min == null || rule.min === '' ? null : Number(rule.min),
+        max: rule.max == null || rule.max === '' ? null : Number(rule.max),
+        severity: rule.severity === 'danger' ? 'danger' : 'warning',
+        channels: [...new Set(rule.channels)],
+      })),
+    });
+    writeAudit({
+      action: 'system.settings.updated',
+      userId: actor._id,
+      username: actor.username,
+      details: `Cập nhật cấu hình hệ thống: offline ${previous.offline_after_seconds}→${values.offline_after_seconds}s, cooldown ${previous.alert_cooldown_minutes}→${values.alert_cooldown_minutes} phút, nhắc lại ${previous.remind_after_minutes}→${values.remind_after_minutes} phút, audit ${previous.audit_retention_days}→${values.audit_retention_days} ngày`,
+    });
+    return { ...systemSettings(), alert_rules: systemSettings().alert_rules.map((rule) => ({ ...rule, channels: [...rule.channels] })) };
+  });
+}
+
+export function testAdminAlertChannel(metric, channel) {
+  return respond(() => {
+    const actor = requireUser();
+    requireRole(actor, ['admin']);
+    const rule = systemSettings().alert_rules.find((item) => item.metric === metric);
+    if (!rule || !rule.channels.includes(channel)) throw new ApiError('Kênh này chưa được bật cho loại cảm biến đã chọn', 'validation');
+    const channelName = { dashboard: 'Dashboard', telegram: 'Telegram', lcd: 'LCD/bo mạch' }[channel];
+    const result = { channel, status: channel === 'dashboard' ? 'sent' : 'simulated', tested_at: iso() };
+    writeAudit({
+      action: 'system.alert_channel.tested',
+      userId: actor._id,
+      username: actor.username,
+      details: `Kiểm tra kênh ${channelName} cho ${metric} (mô phỏng)`,
+    });
+    emit('notice', { tone: 'green', title: `Kiểm tra ${channelName}`, text: 'Đã gửi thử trên môi trường mô phỏng.' });
+    return result;
+  }, 50);
+}
+
+export function listAdminLogs({ user_id, device_id, level, from, to, search = '', page: p = 1, limit = 20 } = {}) {
+  return respond(() => {
+    requireRole(requireUser(), ['admin', 'developer']);
+    const usersById = new Map(db.users.map((user) => [user._id, user]));
+    const devicesById = new Map(db.devices.map((device) => [device._id, device]));
+    const commandLogs = db.commands.map((command) => {
+      const device = devicesById.get(command.device_id);
+      const actor = usersById.get(command.issued_by);
+      const level = command.status === 'failed' ? 'error' : command.status === 'skipped' ? 'warn' : 'info';
+      return {
+        _id: `command:${command._id}`,
+        category: 'command',
+        action: 'hardware.command',
+        level,
+        user_id: command.issued_by ?? null,
+        username: actor?.username ?? (command.source === 'dashboard' ? 'Người dùng' : 'Tự động'),
+        device_id: command.device_id,
+        device_name: device?.device_name ?? 'Thiết bị đã xóa',
+        details: `${command.source} · ${command.payload?.mode ?? '—'}${command.reason ? ` · ${command.reason}` : ''}`,
+        status: command.status,
+        latency_ms: command.latency_ms,
+        created_at: command.sent_at,
+      };
+    });
+    const activityLogs = db.audit_logs.map((entry) => ({
+      ...entry,
+      category: entry.action.startsWith('auth.') ? 'auth' : entry.action.startsWith('system.settings') ? 'config' : 'user',
+      device_name: devicesById.get(entry.device_id)?.device_name ?? null,
+      created_at: entry.created_at,
+    }));
+    const fromTime = from ? new Date(from).getTime() : -Infinity;
+    const toTime = to ? new Date(to).getTime() : Infinity;
+    const retentionStart = now() - systemSettings().audit_retention_days * 86400e3;
+    const needle = search.trim().toLowerCase();
+    const logs = [...activityLogs, ...commandLogs]
+      .filter((entry) => new Date(entry.created_at).getTime() >= retentionStart)
+      .filter((entry) => (!user_id || entry.user_id === user_id) && (!device_id || entry.device_id === device_id) && (!level || entry.level === level))
+      .filter((entry) => {
+        const timestamp = new Date(entry.created_at).getTime();
+        return timestamp >= fromTime && timestamp <= toTime;
+      })
+      .filter((entry) => !needle || `${entry.action} ${entry.username ?? ''} ${entry.device_name ?? ''} ${entry.details}`.toLowerCase().includes(needle))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return {
+      ...page(logs, { page: p, limit }),
+      filters: {
+        users: db.users.map((user) => ({ id: user._id, name: user.full_name, username: user.username })),
+        devices: db.devices.map((device) => ({ id: device._id, name: device.device_name })),
+      },
+    };
+  }, 80);
 }
 
 export function cloneDevices({ device_model_id, quantity }) {
   return respond(() => {
-    requireRole(requireUser(), ['admin', 'developer']);
+    const actor = requireUser();
+    requireRole(actor, ['admin', 'developer']);
     const m = must(byId(db.device_models, device_model_id), 'mẫu thiết bị');
     const n = Math.min(50, Math.max(1, Number(quantity) || 1));
     const base = db.devices.filter((d) => d.device_model_id === m._id).length;
-    return Array.from({ length: n }, (_, i) => {
+    const created = Array.from({ length: n }, (_, i) => {
       const d = {
         _id: oid(), device_model_id: m._id, type_id: m.type_id, device_name: `${m.name} #${base + i + 1}`, url_img: null,
         registration_code: regCode(), owner_id: null, shared_with: [], place_id: null, registered_at: null, last_seen: null,
@@ -759,6 +1230,13 @@ export function cloneDevices({ device_model_id, quantity }) {
       });
       return d;
     });
+    writeAudit({
+      action: 'device.provisioned',
+      userId: actor._id,
+      username: actor.username,
+      details: `Tạo ${created.length} thiết bị theo mẫu "${m.name}"`,
+    });
+    return created;
   }, 300);
 }
 
@@ -842,7 +1320,7 @@ export function deviceStatus(id) {
       online: isOnline(d),
       last_seen: d.last_seen,
       seconds_since_last_seen: d.last_seen ? Math.round((now() - new Date(d.last_seen).getTime()) / 1000) : null,
-      offline_after_seconds: PARAMS.OFFLINE_AFTER_S,
+      offline_after_seconds: systemSettings().offline_after_seconds,
     };
   }, 50);
 }
@@ -1049,6 +1527,13 @@ export function saveRule(input) {
         st.count = 0;
       }
     }
+    writeAudit({
+      action: r._id === input._id ? 'config.rule.updated' : 'config.rule.created',
+      userId: u._id,
+      username: u.username,
+      deviceId: deviceOf(c)._id,
+      details: `Quy tắc "${r.name}" ${r.enabled ? 'được bật' : 'được tắt'}`,
+    });
     const target = r.auto_action?.enabled && byId(db.components, r.auto_action.component_id);
     const warning =
       target && cm.metric === 'light' && cmOf(target).metric === 'rgb_color' && deviceOf(target).place_id === deviceOf(c).place_id
@@ -1060,11 +1545,13 @@ export function saveRule(input) {
 
 export function deleteRule(id) {
   return respond(() => {
-    requireUser();
+    const actor = requireUser();
+    const removed = must(byId(db.threshold_rules, id), 'quy tắc');
     const st = db.rule_states[id];
     if (st?.alert_id) resolveAlert(byId(db.alerts, st.alert_id), 'Quy tắc đã bị xóa', false);
     db.threshold_rules = db.threshold_rules.filter((r) => r._id !== id);
     delete db.rule_states[id];
+    writeAudit({ action: 'config.rule.deleted', userId: actor._id, username: actor.username, details: `Xóa quy tắc "${removed.name}"` });
   });
 }
 
@@ -1114,24 +1601,48 @@ export function saveSchedule(input) {
       s = { _id: oid(), last_run_at: null, created_by: u._id, ...data };
       db.schedules.push(s);
     }
+    writeAudit({
+      action: input._id ? 'config.schedule.updated' : 'config.schedule.created',
+      userId: u._id,
+      username: u.username,
+      deviceId: deviceOf(c)._id,
+      details: `Lịch "${s.name}" ${s.enabled ? 'được bật' : 'được tắt'}`,
+    });
     return s;
   });
 }
 
 export function setScheduleEnabled(id, enabled) {
   return respond(() => {
-    requireUser();
+    const actor = requireUser();
     const s = must(byId(db.schedules, id), 'lịch hẹn');
     s.enabled = enabled;
     s.next_run_at = enabled ? nextCronRun(s.cron) : s.next_run_at;
+    const component = byId(db.components, s.component_id);
+    writeAudit({
+      action: 'config.schedule.updated',
+      userId: actor._id,
+      username: actor.username,
+      deviceId: component ? deviceOf(component)._id : null,
+      details: `Lịch "${s.name}" ${enabled ? 'được bật' : 'được tắt'}`,
+    });
     return s;
   });
 }
 
 export function deleteSchedule(id) {
   return respond(() => {
-    requireUser();
+    const actor = requireUser();
+    const removed = must(byId(db.schedules, id), 'lịch hẹn');
+    const component = byId(db.components, removed.component_id);
     db.schedules = db.schedules.filter((s) => s._id !== id);
+    writeAudit({
+      action: 'config.schedule.deleted',
+      userId: actor._id,
+      username: actor.username,
+      deviceId: component ? deviceOf(component)._id : null,
+      details: `Xóa lịch "${removed.name}"`,
+    });
   });
 }
 
@@ -1198,6 +1709,13 @@ export function acknowledgeAlert(id) {
       });
     }
     Object.assign(a, { status: 'acknowledged', acknowledged_by: u._id, acknowledged_at: iso(), seen: true });
+    writeAudit({
+      action: 'alert.acknowledged',
+      userId: u._id,
+      username: u.username,
+      deviceId: a.device_ids[0] ?? null,
+      details: `Xác nhận cảnh báo: ${a.message}`,
+    });
     emit('alert', a);
     return { ...a, acknowledged_by_name: u.full_name };
   });
@@ -1237,7 +1755,7 @@ export const simulator = {
   setBoard(v) {
     sim.board = v;
     if (!v) {
-      const past = iso(now() - PARAMS.OFFLINE_AFTER_S * 1000 - 1000);
+      const past = iso(now() - systemSettings().offline_after_seconds * 1000 - 1000);
       db.devices.forEach((d) => d.owner_id && d.last_seen && (d.last_seen = past));
     }
     save();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from '../api/index.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -11,7 +12,8 @@ import { downloadText, fmtDate, timeAgo, toCsv } from '../utils/format.js';
 // Trang quản trị: tài khoản (admin) + sản xuất thiết bị / mã đăng ký (admin, developer)
 export default function Admin() {
   const { user } = useAuth();
-  const [tab, setTab] = useState(user.role === 'admin' ? 'users' : 'devices');
+  const location = useLocation();
+  const [tab, setTab] = useState(() => (location.pathname.endsWith('/devices') ? 'devices' : user.role === 'admin' ? 'users' : 'devices'));
   return (
     <div className="page">
       <div className="page-head">
@@ -37,9 +39,9 @@ function Users() {
   const toast = useToast();
   const act = useAction();
   const [confirm, dialog] = useConfirm();
-  const [q, setQ] = useState({ search: '', role: '', page: 1 });
+  const [q, setQ] = useState({ search: '', role: '', status: '', page: 1 });
   const [modal, setModal] = useState(null);
-  const list = useApi(() => api.listUsers({ ...q, limit: 10 }), [q.search, q.role, q.page]);
+  const list = useApi(() => api.listUsers({ ...q, limit: 10 }), [q.search, q.role, q.status, q.page]);
   const done = () => {
     setModal(null);
     list.reload({ silent: true });
@@ -68,10 +70,15 @@ function Users() {
     <section className="card">
       <div className="card-head">
         <div className="filters">
-          <input className="input" style={{ width: 260 }} placeholder="Tìm theo tên đăng nhập / họ tên" value={q.search} onChange={(e) => setQ({ ...q, search: e.target.value, page: 1 })} />
+          <input className="input" style={{ width: 260 }} placeholder="Tìm tên, username hoặc email" value={q.search} onChange={(e) => setQ({ ...q, search: e.target.value, page: 1 })} />
           <select className="select" style={{ width: 170 }} value={q.role} onChange={(e) => setQ({ ...q, role: e.target.value, page: 1 })}>
             <option value="">Tất cả vai trò</option>
             {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+          <select className="select" style={{ width: 170 }} value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value, page: 1 })} aria-label="Lọc theo trạng thái tài khoản">
+            <option value="">Mọi trạng thái</option>
+            <option value="active">Hoạt động</option>
+            <option value="locked">Bị khóa</option>
           </select>
         </div>
         <button className="btn btn-primary" onClick={() => setModal({ type: 'create' })}>
@@ -92,6 +99,8 @@ function Users() {
                 <tr>
                   <th>Tên đăng nhập</th>
                   <th>Họ tên</th>
+                  <th className="hide-sm">Email</th>
+                  <th>Thiết bị</th>
                   <th>Vai trò</th>
                   <th className="hide-sm">Telegram</th>
                   <th className="hide-sm">Tạo lúc</th>
@@ -106,16 +115,22 @@ function Users() {
                       <strong>{u.username}</strong> {u._id === me._id && <Badge>bạn</Badge>}
                     </td>
                     <td>{u.full_name}</td>
+                    <td className="hide-sm">{u.email ?? '—'}</td>
+                    <td>{u.device_count ?? 0}</td>
                     <td><Badge tone={ROLES[u.role]?.tone}>{ROLES[u.role]?.label ?? u.role}</Badge></td>
                     <td className="hide-sm mono muted">{u.telegram_chat_id ?? '—'}</td>
                     <td className="hide-sm muted">{fmtDate(u.created_at)}</td>
                     <td>
-                      <Toggle on={u.is_active !== false} disabled={u._id === me._id} onChange={(v) => setActive(u, v)} label="Kích hoạt tài khoản" />
+                      <div className="inline" style={{ flexWrap: 'nowrap', gap: 8 }}>
+                        <Badge tone={u.is_active !== false ? 'green' : 'red'}>{u.is_active !== false ? 'Hoạt động' : 'Bị khóa'}</Badge>
+                        <Toggle on={u.is_active !== false} disabled={u._id === me._id} onChange={(v) => setActive(u, v)} label="Kích hoạt tài khoản" />
+                      </div>
                     </td>
                     <td>
                       <div className="inline" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end', gap: 2 }}>
                         <button className="icon-btn" title="Sửa" onClick={() => setModal({ type: 'edit', user: u })}><Icon name="pencil" size={16} /></button>
                         <button className="icon-btn" title="Đặt lại mật khẩu" onClick={() => setModal({ type: 'pwd', user: u })}><Icon name="lock" size={16} /></button>
+                        <Link className="icon-btn" to={`/admin/logs?user_id=${encodeURIComponent(u._id)}`} title="Xem lịch sử thao tác"><Icon name="clock" size={16} /></Link>
                         <button className="icon-btn" title="Xóa" disabled={u._id === me._id} onClick={() => remove(u)}><Icon name="trash" size={16} /></button>
                       </div>
                     </td>
@@ -138,7 +153,7 @@ function Users() {
 function UserForm({ user, onClose, onDone }) {
   const toast = useToast();
   const act = useAction();
-  const [f, setF] = useState({ username: '', password: '', full_name: user?.full_name ?? '', role: user?.role ?? 'user', telegram_chat_id: user?.telegram_chat_id ?? '' });
+  const [f, setF] = useState({ username: '', password: '', full_name: user?.full_name ?? '', email: user?.email ?? '', role: user?.role ?? 'user', telegram_chat_id: user?.telegram_chat_id ?? '' });
   const [fields, setFields] = useState({});
   const [error, setError] = useState(null);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -147,7 +162,7 @@ function UserForm({ user, onClose, onDone }) {
     setFields({});
     setError(null);
     try {
-      if (user) await act(() => api.updateUser(user._id, { full_name: f.full_name, role: f.role, telegram_chat_id: f.telegram_chat_id || null }));
+      if (user) await act(() => api.updateUser(user._id, { full_name: f.full_name, email: f.email || null, role: f.role, telegram_chat_id: f.telegram_chat_id || null }));
       else await act(() => api.createUser({ ...f, telegram_chat_id: f.telegram_chat_id || null }));
       toast.success(user ? 'Đã cập nhật tài khoản.' : 'Đã tạo tài khoản.');
       onDone();
@@ -161,6 +176,9 @@ function UserForm({ user, onClose, onDone }) {
       <form className="form-grid" onSubmit={submit}>
         <Field label="Họ và tên" className="full">
           <input className="input" value={f.full_name} onChange={set('full_name')} autoFocus />
+        </Field>
+        <Field label="Email" className="full" error={fields.email}>
+          <input className="input" type="email" value={f.email} onChange={set('email')} placeholder="ten@example.com" />
         </Field>
         {!user && (
           <>
@@ -226,9 +244,9 @@ function ResetPassword({ user, onClose }) {
 function Devices() {
   const toast = useToast();
   const act = useAction();
-  const [q, setQ] = useState({ search: '', registered: '', page: 1 });
+  const [q, setQ] = useState({ search: '', registered: '', status: '', type_id: '', place_id: '', page: 1 });
   const models = useApi(() => api.listDeviceModels(), []);
-  const list = useApi(() => api.listDevices({ ...q, limit: 10 }), [q.search, q.registered, q.page]);
+  const list = useApi(() => api.listDevices({ ...q, limit: 10 }), [q.search, q.registered, q.status, q.type_id, q.place_id, q.page]);
   const [clone, setClone] = useState({ device_model_id: '', quantity: 1 });
   const [created, setCreated] = useState(null);
   const modelName = (id) => (models.data ?? []).find((m) => m._id === id)?.name ?? '—';
@@ -270,11 +288,25 @@ function Devices() {
         <div className="card-head">
           <h2 className="card-title">Tất cả thiết bị</h2>
           <div className="filters">
-            <input className="input" style={{ width: 220 }} placeholder="Tìm theo tên" value={q.search} onChange={(e) => setQ({ ...q, search: e.target.value, page: 1 })} />
+            <input className="input" style={{ width: 220 }} placeholder="Tìm thiết bị hoặc chủ sở hữu" value={q.search} onChange={(e) => setQ({ ...q, search: e.target.value, page: 1 })} />
             <select className="select" style={{ width: 170 }} value={q.registered} onChange={(e) => setQ({ ...q, registered: e.target.value, page: 1 })}>
               <option value="">Tất cả</option>
               <option value="false">Chưa đăng ký</option>
               <option value="true">Đã đăng ký</option>
+            </select>
+            <select className="select" style={{ width: 160 }} value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value, page: 1 })} aria-label="Trạng thái kết nối">
+              <option value="">Mọi trạng thái</option>
+              <option value="online">Online</option>
+              <option value="offline">Offline</option>
+              <option value="unregistered">Chưa đăng ký</option>
+            </select>
+            <select className="select" style={{ width: 180 }} value={q.type_id} onChange={(e) => setQ({ ...q, type_id: e.target.value, page: 1 })} aria-label="Loại thiết bị">
+              <option value="">Mọi loại thiết bị</option>
+              {(list.data?.filters.types ?? []).map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+            </select>
+            <select className="select" style={{ minWidth: 200 }} value={q.place_id} onChange={(e) => setQ({ ...q, place_id: e.target.value, page: 1 })} aria-label="Vị trí thiết bị">
+              <option value="">Mọi vị trí</option>
+              {(list.data?.filters.places ?? []).map((place) => <option key={place.id} value={place.id}>{place.name}</option>)}
             </select>
           </div>
         </div>
@@ -291,19 +323,23 @@ function Devices() {
                 <thead>
                   <tr>
                     <th>Thiết bị</th>
-                    <th className="hide-sm">Mẫu</th>
-                    <th>Đăng ký</th>
-                    <th>Mã đăng ký</th>
+                    <th>Chủ sở hữu</th>
+                    <th>Vị trí</th>
+                    <th>Loại / Mẫu</th>
+                    <th>Kết nối</th>
+                    <th className="hide-sm">Mã đăng ký</th>
                     <th className="hide-sm">Tin cuối</th>
                   </tr>
                 </thead>
                 <tbody>
                   {list.data.items.map((d) => (
                     <tr key={d._id}>
-                      <td><strong>{d.device_name}</strong></td>
-                      <td className="hide-sm">{modelName(d.device_model_id)}</td>
-                      <td>{d.owner_id ? <Badge tone="green">Đã đăng ký</Badge> : <Badge tone="amber">Chưa đăng ký</Badge>}</td>
-                      <td>{d.registration_code ? <span className="code-chip">{d.registration_code}</span> : '—'}</td>
+                      <td><strong>{d.device_name}</strong><span className="admin-log-id">ID {d._id.slice(-8)}</span></td>
+                      <td>{d.owner_id ? <><strong>{d.owner_name}</strong><span className="admin-log-id">@{d.owner_username}</span></> : <Badge tone="gray">Chưa có chủ</Badge>}</td>
+                      <td>{d.place_path ?? '—'}</td>
+                      <td>{d.type_name ?? '—'}<span className="admin-log-id">{d.model_name ?? modelName(d.device_model_id)}</span></td>
+                      <td>{!d.owner_id ? <Badge tone="gray">Chưa đăng ký</Badge> : d.online ? <Badge tone="green" dot>Online</Badge> : <Badge tone="red" dot>Offline</Badge>}</td>
+                      <td className="hide-sm">{d.registration_code ? <span className="code-chip">{d.registration_code}</span> : '—'}</td>
                       <td className="hide-sm muted">{d.owner_id ? timeAgo(d.last_seen) : '—'}</td>
                     </tr>
                   ))}

@@ -135,7 +135,8 @@ export function toCsv(rows) {
 }
 
 export function downloadText(filename, text, type = 'text/csv;charset=utf-8') {
-  const blob = new Blob(['﻿' + text], { type });
+  const content = type.startsWith('text/csv') ? `﻿${text}` : text;
+  const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

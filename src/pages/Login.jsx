@@ -4,9 +4,19 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { USE_MOCK } from '../api/index.js';
 import { FigmaIcon } from '../components/icons.jsx';
 import { Spinner } from '../components/ui.jsx';
+import { isStaff } from '../utils/constants.js';
 import AuthShell from './AuthShell.jsx';
 
 // UC01-1 Đăng nhập (users.username + mật khẩu)
+const destinationFor = (user, requestedPath) => {
+  const home = user?.role === 'developer' ? '/developer' : user?.role === 'admin' ? '/admin' : '/';
+  const allowedPrefix = user?.role === 'developer' ? '/developer' : user?.role === 'admin' ? '/admin' : null;
+  const safeRequestedPath = requestedPath?.startsWith('/') && !requestedPath.startsWith('//');
+  if (!safeRequestedPath) return home;
+  if (!isStaff(user)) return requestedPath.startsWith('/admin') || requestedPath.startsWith('/developer') ? home : requestedPath;
+  return requestedPath === allowedPrefix || requestedPath.startsWith(`${allowedPrefix}/`) ? requestedPath : home;
+};
+
 export default function Login() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
@@ -18,7 +28,7 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to={location.state?.from ?? '/'} replace />;
+  if (user) return <Navigate to={destinationFor(user, location.state?.from)} replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -26,8 +36,8 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      await login(username.trim(), password, remember);
-      navigate(location.state?.from ?? '/', { replace: true });
+      const authenticatedUser = await login(username.trim(), password, remember);
+      navigate(destinationFor(authenticatedUser, location.state?.from), { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

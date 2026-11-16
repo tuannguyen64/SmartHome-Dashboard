@@ -3,7 +3,8 @@
 //
 // ĐÃ CÓ ở backend nhóm: /auth, /users, /types, /component-models, /device-models, /places, /devices/...
 // CHƯA CÓ (cần nhóm backend bổ sung theo database-design.md): /components, /commands,
-//   /threshold-rules, /schedules, /alerts, PATCH /users/me. Các trang dùng chúng sẽ báo lỗi cho tới khi có.
+//   /threshold-rules, /schedules, /alerts, /admin/overview, /admin/logs, /admin/settings, PATCH /users/me.
+// Các trang dùng chúng sẽ báo lỗi cho tới khi backend hỗ trợ.
 
 import { getToken } from './session.js';
 import { ApiError } from './errors.js';
@@ -58,11 +59,17 @@ export const createUser = (b) => post('/users', b);
 export const updateUser = (id, b) => patch(`/users/${id}`, b);
 export const resetUserPassword = (id, new_password) => patch(`/users/${id}/password`, { new_password });
 export const deleteUser = (id) => del(`/users/${id}`);
+export const adminOverview = () => get('/admin/overview');
+export const listAdminLogs = (q) => get('/admin/logs', q);
+export const getAdminSettings = () => get('/admin/settings');
+export const updateAdminSettings = (settings) => patch('/admin/settings', settings);
+export const testAdminAlertChannel = (metric, channel) => post('/admin/settings/test-alert', { metric, channel });
 
 // ---- danh mục
 export const listTypes = () => get('/types');
 export const listComponentModels = () => get('/component-models');
 export const listDeviceModels = () => get('/device-models');
+export const exportDeviceModel = (id) => get(`/device-models/${id}/export`);
 
 // ---- vị trí
 export const listPlaces = () => get('/places');
