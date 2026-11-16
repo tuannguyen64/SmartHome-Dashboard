@@ -1,8 +1,10 @@
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/index.js';
-import { Badge, Empty, Skeleton } from '../components/ui.jsx';
+import { Badge, Empty, Field, Modal, Skeleton, useConfirm } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
-import { useApi } from '../hooks/useApi.js';
+import { useAction, useApi } from '../hooks/useApi.js';
+import { useToast } from '../context/ToastContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fmtDateTime, fmtValue } from '../utils/format.js';
 import { metricInfo } from '../utils/constants.js';
@@ -41,6 +43,11 @@ function ComponentCard({ component }) {
 
 // Chi tiết một thiết bị (admin + developer): kết nối, dữ liệu mới nhất, linh kiện, lệnh gần đây
 function DeviceDetail({ deviceId, base }) {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const act = useAction();
+  const [confirm, dialog] = useConfirm();
+  const [renaming, setRenaming] = useState(null);
   const device = useApi(() => api.getDevice(deviceId), [deviceId], { poll: POLL_MS });
   const status = useApi(() => api.deviceStatus(deviceId), [deviceId], { poll: POLL_MS });
   const latest = useApi(() => api.deviceLatest(deviceId), [deviceId], { poll: POLL_MS });
@@ -54,6 +61,35 @@ function DeviceDetail({ deviceId, base }) {
   ]);
   const busy = device.loading || status.loading || latest.loading || commands.loading;
   const error = device.error || status.error || latest.error || commands.error;
+
+  const rename = async (event) => {
+    event.preventDefault();
+    try {
+      await act(() => api.updateDevice(deviceId, { device_name: renaming.trim() }));
+      toast.success('Đã đổi tên thiết bị.');
+      setRenaming(null);
+      device.reload({ silent: true });
+    } catch (error) {
+      toast.error(error.message || 'Không đổi được tên.');
+    }
+  };
+
+  const remove = async () => {
+    const name = device.data?.device_name ?? 'thiết bị';
+    if (!(await confirm({
+      title: 'Xóa thiết bị?',
+      message: `Xóa hẳn "${name}" khỏi hệ thống, kèm quy tắc và lịch hẹn liên quan. Chủ sở hữu sẽ không còn thấy thiết bị này. Không hoàn tác được.`,
+      confirmText: 'Xóa thiết bị',
+      danger: true,
+    }))) return;
+    try {
+      await act(() => api.deleteDevice(deviceId));
+      toast.success(`Đã xóa "${name}".`);
+      navigate(`${base}/devices`, { replace: true });
+    } catch (error) {
+      toast.error(error.message || 'Không xóa được thiết bị.');
+    }
+  };
 
   if (device.loading && !device.data) {
     return <div className="page developer-page"><Skeleton height={190} /><Skeleton height={280} style={{ marginTop: 16 }} /></div>;
@@ -80,9 +116,17 @@ function DeviceDetail({ deviceId, base }) {
           <h1 className="page-title">Chi tiết thiết bị</h1>
           <p className="page-sub">Kiểm tra kết nối, dữ liệu mới nhất, linh kiện và lịch sử lệnh.</p>
         </div>
-        <button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}>
-          <Icon name="refresh" size={16} /> Làm mới
-        </button>
+        <div className="inline">
+          <button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}>
+            <Icon name="refresh" size={16} /> Làm mới
+          </button>
+          <button className="btn btn-outline" type="button" disabled={!device.data} onClick={() => setRenaming(device.data.device_name)}>
+            <Icon name="pencil" size={16} /> Đổi tên
+          </button>
+          <button className="btn btn-danger" type="button" disabled={!device.data} onClick={remove}>
+            <Icon name="trash" size={16} /> Xóa thiết bị
+          </button>
+        </div>
       </div>
 
       {error && <div className="alert-box alert-box-red" role="alert">{error.message}</div>}
@@ -148,6 +192,27 @@ function DeviceDetail({ deviceId, base }) {
           <Empty title="Chưa có lệnh">Lệnh điều khiển của thiết bị sẽ xuất hiện ở đây.</Empty>
         )}
       </section>
+
+      {renaming !== null && (
+        <Modal
+          title="Đổi tên thiết bị"
+          onClose={() => setRenaming(null)}
+          width={440}
+          footer={(
+            <>
+              <button className="btn btn-soft" type="button" onClick={() => setRenaming(null)}>Hủy</button>
+              <button className="btn btn-primary" type="submit" form="rename-device-form">Lưu</button>
+            </>
+          )}
+        >
+          <form id="rename-device-form" onSubmit={rename}>
+            <Field label="Tên thiết bị">
+              <input className="input" required autoFocus value={renaming} onChange={(event) => setRenaming(event.target.value)} />
+            </Field>
+          </form>
+        </Modal>
+      )}
+      {dialog}
     </div>
   );
 }

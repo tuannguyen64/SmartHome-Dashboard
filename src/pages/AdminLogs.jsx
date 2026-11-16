@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/index.js';
 import { Badge, Empty, Field, Pagination, Skeleton } from '../components/ui.jsx';
@@ -10,7 +10,7 @@ import { fmtDateTime, toCsv, downloadText } from '../utils/format.js';
 import './admin.css';
 
 const PAGE_SIZE = 15;
-const EMPTY_FILTERS = { search: '', user_id: '', device_id: '', level: '', from: '', to: '' };
+const EMPTY_FILTERS = { search: '', user_id: '', level: '', from: '', to: '' };
 const dateBoundary = (date, end = false) => date ? new Date(`${date}T${end ? '23:59:59.999' : '00:00:00'}+07:00`).toISOString() : undefined;
 const LEVELS = {
   info: { label: 'Info', tone: 'blue' },
@@ -45,6 +45,15 @@ export default function AdminLogs() {
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, user_id: searchParams.get('user_id') ?? '' }));
   const [page, setPage] = useState(1);
+  // Ô tìm kiếm giữ chữ đang gõ; chỉ lọc sau khi ngừng gõ 300ms để bảng không tải lại theo từng ký tự
+  const [searchInput, setSearchInput] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((current) => (current.search === searchInput ? current : { ...current, search: searchInput }));
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const query = {
     ...filters,
     from: dateBoundary(filters.from),
@@ -59,7 +68,13 @@ export default function AdminLogs() {
     setPage(1);
     setFilters((current) => ({ ...current, [key]: value }));
   };
-  const hasFilters = Object.values(filters).some(Boolean);
+  const hasFilters = Object.values(filters).some(Boolean) || Boolean(searchInput);
+  const filteredUser = filters.user_id ? (logs.data?.filters.users ?? []).find((u) => u.id === filters.user_id) : null;
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput('');
+    setFilters(EMPTY_FILTERS);
+  };
 
   return (
     <div className="page admin-page">
@@ -95,21 +110,9 @@ export default function AdminLogs() {
       </div>
 
       <section className="card admin-log-filters">
-        <div className="filters">
-          <Field label="Tìm kiếm">
-            <input className="input" value={filters.search} onChange={(e) => setFilter('search', e.target.value)} placeholder="Tên user, thiết bị, sự kiện..." />
-          </Field>
-          <Field label="User ID">
-            <select className="select" value={filters.user_id} onChange={(e) => setFilter('user_id', e.target.value)}>
-              <option value="">Tất cả người dùng</option>
-              {(logs.data?.filters.users ?? []).map((user) => <option key={user.id} value={user.id}>{user.name} (@{user.username})</option>)}
-            </select>
-          </Field>
-          <Field label="Thiết bị ID">
-            <select className="select" value={filters.device_id} onChange={(e) => setFilter('device_id', e.target.value)}>
-              <option value="">Tất cả thiết bị</option>
-              {(logs.data?.filters.devices ?? []).map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}
-            </select>
+        <div className="admin-log-filter-grid">
+          <Field label="Tìm kiếm" className="admin-log-search">
+            <input className="input" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Tên user, thiết bị, sự kiện..." />
           </Field>
           <Field label="Mức độ">
             <select className="select" value={filters.level} onChange={(e) => setFilter('level', e.target.value)}>
@@ -123,8 +126,14 @@ export default function AdminLogs() {
           <Field label="Đến ngày">
             <input className="input" type="date" value={filters.to} onChange={(e) => setFilter('to', e.target.value)} />
           </Field>
-          {hasFilters && <button className="btn btn-ghost btn-sm" type="button" onClick={() => { setPage(1); setFilters(EMPTY_FILTERS); }}>Xóa bộ lọc</button>}
+          <button className="btn btn-ghost btn-sm admin-log-clear" type="button" disabled={!hasFilters} onClick={clearFilters}>Xóa bộ lọc</button>
         </div>
+        {filters.user_id && (
+          <p className="admin-log-user-filter">
+            Đang xem nhật ký của <strong>{filteredUser ? `${filteredUser.name} (@${filteredUser.username})` : 'một người dùng'}</strong>
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => setFilter('user_id', '')}>Xem tất cả</button>
+          </p>
+        )}
         {filters.from && filters.to && filters.from > filters.to && <p className="field-error">Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.</p>}
       </section>
 

@@ -44,6 +44,8 @@ export default function DeveloperCatalog() {
   const errors = [models.error, components.error, types.error].filter(Boolean);
   const componentById = useMemo(() => new Map((components.data ?? []).map((item) => [item._id, item])), [components.data]);
   const typeById = useMemo(() => new Map((types.data ?? []).map((item) => [item._id, item])), [types.data]);
+  // Developer chỉ được thêm / sửa / xóa mẫu thiết bị; linh kiện và loại thiết bị do admin quản lý
+  const canEdit = (kind) => user?.role === 'admin' || kind === 'models';
   const reloadAll = () => Promise.all([types.reload({ silent: true }), components.reload({ silent: true }), models.reload({ silent: true })]);
 
   const changeSection = (value) => {
@@ -110,9 +112,13 @@ export default function DeveloperCatalog() {
       <section className="card developer-catalog">
         <div className="card-head developer-catalog-head">
           <Segmented value={section} onChange={changeSection} options={SECTIONS} />
-          <button className="btn btn-primary" type="button" onClick={() => setEditing({ section, item: null })}>
-            <Icon name="plus" size={16} /> Thêm {NOUN[section]}
-          </button>
+          {canEdit(section) ? (
+            <button className="btn btn-primary" type="button" onClick={() => setEditing({ section, item: null })}>
+              <Icon name="plus" size={16} /> Thêm {NOUN[section]}
+            </button>
+          ) : (
+            <span className="muted small">Chỉ quản trị viên được thêm, sửa {NOUN[section]}</span>
+          )}
         </div>
 
         <div className="developer-filters">
@@ -173,7 +179,7 @@ export default function DeveloperCatalog() {
                       <div><dt>Khoảng đo</dt><dd>{item.range ? `${item.range.min} – ${item.range.max} ${item.unit || ''}` : '—'}</dd></div>
                     </dl>
                     {item.description && <p className="developer-item-description">{item.description}</p>}
-                    <div className="developer-item-foot">{itemActions('components', item)}</div>
+                    {canEdit('components') && <div className="developer-item-foot">{itemActions('components', item)}</div>}
                   </article>
                 );
               }
@@ -184,7 +190,7 @@ export default function DeveloperCatalog() {
                     <div><h3>{item.name}</h3><span>{used} mẫu thiết bị</span></div>
                     <Badge tone="gray">Loại thiết bị</Badge>
                   </div>
-                  <div className="developer-item-foot">{itemActions('types', item)}</div>
+                  {canEdit('types') && <div className="developer-item-foot">{itemActions('types', item)}</div>}
                 </article>
               );
             })}

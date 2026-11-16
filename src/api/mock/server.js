@@ -748,14 +748,15 @@ export function deleteUser(id) {
 export const listTypes = () => respond(() => (requireUser(), db.types));
 export const listComponentModels = () => respond(() => (requireUser(), db.component_models));
 export const listDeviceModels = () => respond(() => (requireUser(), db.device_models));
-// Thêm / sửa / xóa danh mục (admin, developer)
-function catalogWrite(fn) {
+// Thêm / sửa / xóa danh mục: loại thiết bị, linh kiện chỉ admin; mẫu thiết bị admin + developer
+function catalogWrite(fn, roles = ['admin']) {
   return respond(() => {
     const u = requireUser();
-    requireRole(u, ['admin', 'developer']);
+    requireRole(u, roles);
     return fn(u);
   }, 150);
 }
+const STAFF = ['admin', 'developer'];
 const uniqueName = (list, name, id, what) => {
   if (!String(name ?? '').trim()) throw new ApiError(`Nhập tên ${what}`, 'validation', { fields: { name: 'Bắt buộc' } });
   if (list.some((x) => x._id !== id && x.name.toLowerCase() === String(name).trim().toLowerCase())) {
@@ -831,7 +832,7 @@ export const createDeviceModel = (body) => catalogWrite(() => {
   checkDeviceModel(m, null);
   db.device_models.push(m);
   return m;
-});
+}, STAFF);
 export const updateDeviceModel = (id, body) => catalogWrite(() => {
   const m = must(byId(db.device_models, id), 'mẫu thiết bị');
   const next = { ...m };
@@ -839,13 +840,13 @@ export const updateDeviceModel = (id, body) => catalogWrite(() => {
   checkDeviceModel(next, id);
   Object.assign(m, next);
   return m;
-});
+}, STAFF);
 export const deleteDeviceModel = (id) => catalogWrite(() => {
   must(byId(db.device_models, id), 'mẫu thiết bị');
   const used = db.devices.filter((d) => d.device_model_id === id).length;
   if (used) throw new ApiError(`Mẫu đang được dùng bởi ${used} thiết bị`, 'conflict');
   db.device_models = db.device_models.filter((x) => x._id !== id);
-});
+}, STAFF);
 
 export const exportDeviceModel = (id) => respond(() => {
   const user = requireUser();

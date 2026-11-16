@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/index.js';
-import { Badge, Empty, Field, Modal, Pagination, Skeleton, useConfirm } from '../components/ui.jsx';
+import { Badge, Empty, Field, Modal, Pagination, Skeleton } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -11,13 +11,11 @@ import './developer.css';
 
 const PAGE_SIZE = 12;
 
-// Kho thiết bị (admin + developer): cấp thiết bị theo mẫu, xem chi tiết, đổi tên, gỡ chủ, xóa
+// Kho thiết bị (admin + developer): cấp thiết bị theo mẫu, mở Chi tiết để đổi tên hoặc xóa
 export default function DeveloperDevices() {
   const { user } = useAuth();
   const base = user?.role === 'developer' ? '/developer' : '/admin';
   const [filters, setFilters] = useState({ search: '', registered: '', status: '', type_id: '', place_id: '', page: 1 });
-  const [renaming, setRenaming] = useState(null);
-  const [confirm, dialog] = useConfirm();
   const [provision, setProvision] = useState({ device_model_id: '', quantity: 1 });
   const [created, setCreated] = useState(null);
   const toast = useToast();
@@ -43,38 +41,6 @@ export default function DeveloperDevices() {
     } catch (error) {
       toast.error(error.message || 'Không thể cấp thiết bị.');
     }
-  };
-
-  const runAction = async (fn, message) => {
-    try {
-      await act(fn);
-      toast.success(message);
-      devices.reload({ silent: true });
-      return true;
-    } catch (error) {
-      toast.error(error.message || 'Thao tác không thành công.');
-      return false;
-    }
-  };
-
-  const unregister = async (device) => {
-    if (!(await confirm({
-      title: 'Gỡ thiết bị khỏi chủ sở hữu?',
-      message: `"${device.device_name}" sẽ trở về trạng thái chưa đăng ký và có thể đăng ký lại bằng mã. Quy tắc và lịch hẹn của thiết bị bị xóa.`,
-      confirmText: 'Gỡ khỏi chủ',
-      danger: true,
-    }))) return;
-    runAction(() => api.unregisterDevice(device._id), `Đã gỡ "${device.device_name}" khỏi chủ sở hữu.`);
-  };
-
-  const remove = async (device) => {
-    if (!(await confirm({
-      title: 'Xóa thiết bị?',
-      message: `Xóa hẳn "${device.device_name}" khỏi kho, kèm quy tắc và lịch hẹn liên quan. Không hoàn tác được.`,
-      confirmText: 'Xóa thiết bị',
-      danger: true,
-    }))) return;
-    runAction(() => api.deleteDevice(device._id), `Đã xóa "${device.device_name}".`);
   };
 
   const exportCodes = (items) => downloadText(
@@ -198,14 +164,7 @@ export default function DeveloperDevices() {
                       <td>{!device.owner_id ? <Badge tone="gray">Chưa đăng ký</Badge> : device.online ? <Badge tone="green" dot>Online</Badge> : <Badge tone="red" dot>Offline</Badge>}</td>
                       <td>{device.registration_code ? <code className="code-chip">{device.registration_code}</code> : '—'}</td>
                       <td className="muted nowrap">{device.last_seen ? fmtDateTime(device.last_seen) : 'Chưa có'}</td>
-                      <td>
-                        <div className="developer-row-actions">
-                          <Link className="btn btn-outline btn-sm" to={`${base}/devices/${device._id}`}>Chi tiết</Link>
-                          <button className="icon-btn" type="button" title="Đổi tên" aria-label={`Đổi tên ${device.device_name}`} onClick={() => setRenaming({ id: device._id, name: device.device_name })}><Icon name="pencil" size={16} /></button>
-                          {device.owner_id && <button className="icon-btn" type="button" title="Gỡ khỏi chủ sở hữu" aria-label={`Gỡ ${device.device_name} khỏi chủ sở hữu`} onClick={() => unregister(device)}><Icon name="link" size={16} /></button>}
-                          <button className="icon-btn developer-danger" type="button" title="Xóa thiết bị" aria-label={`Xóa ${device.device_name}`} onClick={() => remove(device)}><Icon name="trash" size={16} /></button>
-                        </div>
-                      </td>
+                      <td><Link className="btn btn-outline btn-sm" to={`${base}/devices/${device._id}`}>Chi tiết</Link></td>
                     </tr>
                   ))}
                 </tbody>
@@ -215,33 +174,6 @@ export default function DeveloperDevices() {
           </>
         )}
       </section>
-
-      {renaming && (
-        <Modal
-          title="Đổi tên thiết bị"
-          onClose={() => setRenaming(null)}
-          width={440}
-          footer={(
-            <>
-              <button className="btn btn-soft" type="button" onClick={() => setRenaming(null)}>Hủy</button>
-              <button className="btn btn-primary" type="submit" form="rename-device-form">Lưu</button>
-            </>
-          )}
-        >
-          <form
-            id="rename-device-form"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (await runAction(() => api.updateDevice(renaming.id, { device_name: renaming.name.trim() }), 'Đã đổi tên thiết bị.')) setRenaming(null);
-            }}
-          >
-            <Field label="Tên thiết bị">
-              <input className="input" required autoFocus value={renaming.name} onChange={(event) => setRenaming({ ...renaming, name: event.target.value })} />
-            </Field>
-          </form>
-        </Modal>
-      )}
-      {dialog}
 
       {created && (
         <Modal
