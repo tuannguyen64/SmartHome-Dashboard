@@ -42,19 +42,23 @@ export default function Charts() {
   const { home, loading: homeLoading } = useHome();
   const rules = useApi(() => api.listRules().catch(() => []), []);
   const [range, setRange] = useState('24h');
-  const [placeId, setPlaceId] = useState('');
+  const [deviceId, setDeviceId] = useState('');
   const [custom, setCustom] = useState(() => ({ from: toLocalInput(Date.now() - 2 * 86400e3), to: toLocalInput(Date.now()) }));
   const [win, setWin] = useState(() => ({ from: Date.now() - 86400e3, to: Date.now() }));
   const [customError, setCustomError] = useState(null);
   const [series, setSeries] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const rooms = useMemo(() => {
-    if (!home) return [];
-    const used = new Set(home.sensors.map((s) => s.place_id).filter((id) => home.paths.has(id)));
-    return [...used].map((id) => ({ id, name: home.paths.get(id) }));
+  // Mỗi lần chỉ xem cảm biến của một thiết bị
+  const sensorDevices = useMemo(() => {
+    const list = new Map();
+    (home?.sensors ?? []).forEach((s) => {
+      if (!list.has(s.device_id)) list.set(s.device_id, { id: s.device_id, name: s.device_name, path: home.paths.get(s.place_id) });
+    });
+    return [...list.values()];
   }, [home]);
-  const sensors = useMemo(() => (home?.sensors ?? []).filter((s) => !placeId || s.place_id === placeId), [home, placeId]);
+  const currentDevice = sensorDevices.find((d) => d.id === deviceId) ?? sensorDevices[0] ?? null;
+  const sensors = useMemo(() => (home?.sensors ?? []).filter((s) => s.device_id === currentDevice?.id), [home, currentDevice?.id]);
   const key = sensors.map((s) => s._id).join();
 
   useEffect(() => {
@@ -123,10 +127,9 @@ export default function Charts() {
           <p className="page-sub">Lịch sử dữ liệu cảm biến lưu trong hệ thống · giờ GMT+7</p>
         </div>
         <div className="inline">
-          {rooms.length > 1 && (
-            <select className="select" style={{ width: 200 }} value={placeId} onChange={(e) => setPlaceId(e.target.value)} aria-label="Lọc theo vị trí">
-              <option value="">Tất cả vị trí</option>
-              {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+          {sensorDevices.length > 0 && (
+            <select className="select" style={{ width: 280 }} value={currentDevice?.id ?? ''} onChange={(e) => setDeviceId(e.target.value)} aria-label="Chọn thiết bị">
+              {sensorDevices.map((d) => <option key={d.id} value={d.id}>{d.name}{d.path ? ` · ${d.path.split(' › ').pop()}` : ''}</option>)}
             </select>
           )}
           <Segmented value={range} onChange={setRange} options={RANGES} />
