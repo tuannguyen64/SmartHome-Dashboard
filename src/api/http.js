@@ -94,7 +94,8 @@ export const customerPlaces = (id) => get(`/admin/customers/${id}/places`);
 export const installDevice = (b) => post('/devices/install', b);
 
 // ---- vị trí
-export const listPlaces = () => get('/places');
+// Backend lưu người quản lý vị trí ở `user_id`; giao diện dùng `owner_id` (giống bản giả lập)
+export const listPlaces = () => get('/places').then((list) => list.map((p) => ({ ...p, owner_id: p.owner_id ?? p.user_id ?? null })));
 export const createPlace = (b) => post('/places', b);
 export const updatePlace = (id, b) => patch(`/places/${id}`, b);
 export const deletePlace = (id) => del(`/places/${id}`);
