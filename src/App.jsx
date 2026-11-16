@@ -64,6 +64,7 @@ export default function App() {
         <Route path="devices" element={<Admin />} />
         <Route path="logs" element={<AdminLogs />} />
         <Route path="settings" element={<AdminOnly><AdminSettings /></AdminOnly>} />
+        <Route path="ca-nhan" element={<Profile />} />
       </Route>
       <Route path="/developer" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="diagnostics" element={<DeveloperDiagnostics />} />
         <Route path="diagnostics/:deviceId" element={<DeveloperDiagnostics />} />
         <Route path="logs" element={<AdminLogs />} />
+        <Route path="ca-nhan" element={<Profile />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

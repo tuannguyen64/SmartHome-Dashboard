@@ -92,11 +92,8 @@ function AdminShell({ base, isDeveloper }) {
                     <strong>{name}</strong>
                     <span>@{user?.username}</span>
                   </div>
-                  <Link to="/ca-nhan" role="menuitem">
+                  <Link to={`${base}/ca-nhan`} role="menuitem">
                     <Icon name="user" size={16} /> Thông tin cá nhân
-                  </Link>
-                  <Link to="/thiet-bi" role="menuitem">
-                    <Icon name="home" size={16} /> Vị trí và thiết bị
                   </Link>
                   <Link to={base} role="menuitem">
                     <Icon name="sliders" size={16} /> {user?.role === 'developer' ? 'Bảng điều khiển Developer' : 'Bảng điều khiển Admin'}

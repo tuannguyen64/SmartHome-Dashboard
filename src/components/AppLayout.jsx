@@ -43,7 +43,11 @@ export default function AppLayout() {
       </div>
     );
   if (!user) return <Navigate to="/dang-nhap" replace state={{ from: location.pathname }} />;
-  if (isStaff(user) && location.pathname === '/') return <Navigate to="/admin" replace />;
+  // Admin/Developer chỉ quản lý hệ thống, không có nhà/thiết bị riêng: luôn ở khu quản trị
+  if (isStaff(user)) {
+    const base = user.role === 'developer' ? '/developer' : '/admin';
+    return <Navigate to={location.pathname === '/ca-nhan' ? `${base}/ca-nhan` : base} replace />;
+  }
   return (
     <RealtimeProvider>
       <Header />
