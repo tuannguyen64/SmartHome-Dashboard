@@ -32,6 +32,19 @@ Thiết bị chưa đăng ký có mã ở **Quản trị → Thiết bị & mã 
 | Giả lập (mặc định) | `VITE_USE_MOCK=true` | Backend giả chạy trong trình duyệt (`src/api/mock`), dữ liệu lưu ở localStorage. Bo "gửi" số đo mỗi 5 giây. Có nút **Mô phỏng** ở góc dưới bên trái. |
 | Backend thật | Tạo `.env` từ `.env.example`, đặt `VITE_USE_MOCK=false` | Vite chuyển tiếp `/api` tới `http://localhost:5000` (đổi bằng `VITE_API_TARGET`). |
 
+## Chạy với backend thật (my-express-app)
+
+1. Backend: trong thư mục `my-express-app`, điền `.env` (Mongo Atlas, Adafruit, tùy chọn `TELEGRAM_BOT_TOKEN`) rồi `npm install` và `npm run dev` (cổng 5000).
+2. Web: tạo `.env` từ `.env.example` (`VITE_USE_MOCK=false`), rồi `npm run dev` và mở http://localhost:5173.
+
+Web dùng các API của backend: `/auth`, `/users`, `/types`, `/component-models`, `/device-models`, `/places`, `/devices/...`
+(gồm `/devices/:id/schedules`, `/devices/:id/commands`), `/alert-rules`, `/alerts`, `/admin/overview`.
+`src/api/http.js` chuyển dữ liệu theo thiết bị của backend sang dạng "component" mà giao diện dùng.
+Chưa có ở backend: `/admin/logs`, `/admin/settings` (hai trang này chỉ chạy ở chế độ giả lập).
+
+Vai trò: `admin` và `developer` chỉ dùng khu quản trị (`/admin`, `/developer`), không có nhà/thiết bị riêng.
+Muốn dùng nhà thông minh thì tạo một tài khoản `user`.
+
 ## Mô hình dữ liệu (theo database-design.md)
 
 - `places`: cây **nhà → tầng → phòng → khu vực** (`parent_id`, `ancestors`).
