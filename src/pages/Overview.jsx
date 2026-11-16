@@ -178,6 +178,7 @@ function SensorCard({ comp, rules, path, now }) {
     <div className={`card ov-sensor${dim ? ' dim' : ''}`}>
       <div className="ov-sensor-top">
         <MetricIcon metric={cm.metric} />
+        <strong className="ov-sensor-device" title={comp.device_name}>{comp.device_name}</strong>
         <Badge tone={st.tone}>{st.label}</Badge>
       </div>
       <div className="ov-value">
@@ -190,9 +191,8 @@ function SensorCard({ comp, rules, path, now }) {
           </>
         )}
       </div>
-      <div className="ov-label">{cm.label}</div>
-      <div className="ov-device" title={path ?? ''}>
-        <strong>{comp.device_name}</strong>
+      <div className="ov-label">
+        {cm.label}
         {path && ` · ${path.split(' › ').pop()}`}
       </div>
       <div className="ov-meta">

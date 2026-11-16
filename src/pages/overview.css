@@ -1,7 +1,10 @@
 /* Màn "SmartHome – Tổng quan" (node 78:2264) */
 .ov-sensor { display: flex; flex-direction: column; min-height: 180px; color: inherit; transition: opacity 0.2s; }
 .ov-sensor.dim { opacity: 0.55; }
-.ov-sensor-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.ov-sensor-top { display: flex; align-items: center; gap: 10px; }
+.ov-sensor-top .badge { flex-shrink: 0; }
+/* Tên thiết bị cạnh biểu tượng: nổi bật, luôn một dòng */
+.ov-sensor-device { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-sensor .icon-tile { width: 44px; height: 44px; }
 .ov-value { padding-top: 12px; display: flex; align-items: baseline; gap: 6px; min-height: 52px; }
 .ov-num { font-size: 34px; line-height: 40px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
@@ -10,8 +13,6 @@
 .ov-unit { font-size: 18px; font-weight: 500; color: var(--muted); }
 .ov-nodata { font-size: 20px; line-height: 40px; color: var(--muted); }
 .ov-label { font-size: 15px; line-height: 20px; color: var(--muted); margin-top: 2px; }
-.ov-device { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ov-device strong { color: var(--text); font-weight: 600; }
 .ov-meta { font-size: 13px; line-height: 19px; color: var(--muted); margin-top: 4px; }
 .ov-alertcard:hover { text-decoration: none; box-shadow: 0 4px 12px rgba(36, 56, 88, 0.08); }
 
