@@ -968,15 +968,6 @@ export function deletePlace(id) {
   });
 }
 
-export function placeDevices(id, recursive = true) {
-  return respond(() => {
-    const u = requireUser();
-    const ids = new Set([id]);
-    if (recursive) db.places.filter((x) => x.ancestors.includes(id)).forEach((x) => ids.add(x._id));
-    return db.devices.filter((d) => ids.has(d.place_id) && canSee(u, d)).map(withOnline);
-  });
-}
-
 // ================================================================ API: thiết bị
 
 export function myDevices() {
@@ -1361,19 +1352,6 @@ export function getDevice(id) {
   });
 }
 
-export function registerDevice({ registration_code, place_id, device_name }) {
-  return respond(() => {
-    const u = requireUser();
-    const d = db.devices.find((x) => x.registration_code === String(registration_code ?? '').trim().toUpperCase());
-    if (!d) throw new ApiError('Mã đăng ký không đúng', 'not_found', { fields: { registration_code: 'Không đúng' } });
-    if (d.owner_id) throw new ApiError('Thiết bị đã có chủ', 'conflict', { fields: { registration_code: 'Đã được đăng ký' } });
-    const p = must(byId(db.places, place_id), 'vị trí');
-    if (p.owner_id !== u._id) throw new ApiError('Vị trí không thuộc về bạn', 'forbidden');
-    Object.assign(d, { owner_id: u._id, place_id: p._id, registered_at: iso(), last_seen: iso(), device_name: device_name?.trim() || d.device_name });
-    return withOnline(d);
-  }, 300);
-}
-
 export function updateDevice(id, body) {
   return respond(() => {
     const u = requireUser();
@@ -1683,19 +1661,6 @@ export function deviceData(id, { componentModelId, from, to, limit = 1000 }) {
     }
     return { items, count: items.length, aggregated };
   }, 200);
-}
-
-export function deviceControl(id, { componentModelId, from, limit = 30 }) {
-  return respond(() => {
-    const d = must(byId(db.devices, id), 'thiết bị');
-    const c = must(compsOf(d).find((x) => x.component_model_id === componentModelId), 'linh kiện');
-    const f = from ? new Date(from).getTime() : 0;
-    return { items: c.control.filter((x) => new Date(x.ts).getTime() >= f).slice().reverse().slice(0, limit) };
-  });
-}
-
-export function deviceCommands(id, { limit = 10 } = {}) {
-  return respond(() => ({ items: db.commands.filter((c) => c.device_id === id).slice(0, limit) }));
 }
 
 // UC03-1 / UC03-2: lệnh từ Dashboard

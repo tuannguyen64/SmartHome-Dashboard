@@ -145,8 +145,6 @@ img { display: block; }
   display: inline-flex; align-items: center; justify-content: center; color: var(--muted);
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
-.link-btn { border: none; background: none; padding: 0; color: var(--primary); font-size: 15px; }
-.link-btn:hover { text-decoration: underline; }
 
 /* ------------------------------------------------------------ badge */
 .badge {

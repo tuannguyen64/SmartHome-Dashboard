@@ -155,7 +155,7 @@ export default function Charts() {
         <Skeleton height={320} />
       ) : !sensors.length ? (
         <div className="card">
-          <Empty title="Chưa có cảm biến">Đăng ký thiết bị có cảm biến ở mục Thiết bị.</Empty>
+          <Empty title="Chưa có cảm biến">Liên hệ kỹ thuật viên để lắp thiết bị có cảm biến.</Empty>
         </div>
       ) : (
         <>

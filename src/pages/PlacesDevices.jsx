@@ -10,7 +10,7 @@ import { Badge, Empty, Field, Modal, Skeleton, useConfirm } from '../components/
 import { CHILD_TYPES, DEVICE_MODES, PARENT_TYPES, PLACE_TYPES } from '../utils/constants.js';
 import { timeAgo } from '../utils/format.js';
 
-// Quản lý vị trí (places – cây nhà > tầng > phòng > khu vực) và thiết bị (đăng ký bằng mã, đổi tên, chuyển vị trí, gỡ)
+// Quản lý vị trí (places – cây nhà > tầng > phòng > khu vực) và thiết bị (đổi tên, chuyển vị trí, gỡ)
 export default function PlacesDevices() {
   const { user } = useAuth();
   const toast = useToast();

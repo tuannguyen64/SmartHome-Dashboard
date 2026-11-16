@@ -67,7 +67,6 @@
 .side-menu button:hover { background: var(--surface-2); }
 .side-menu button.active { background: var(--primary-50); color: var(--primary); }
 .side-menu button.danger { color: var(--red); }
-.tg-code { font-size: 34px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; color: var(--primary); }
 
 /* Vị trí và thiết bị: cây places */
 .tree { list-style: none; margin: 0; padding: 0; }

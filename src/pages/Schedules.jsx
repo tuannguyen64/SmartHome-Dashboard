@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api/index.js';
 import { useAction, useApi } from '../hooks/useApi.js';
 import { useHome } from '../hooks/useHome.js';
@@ -206,7 +205,7 @@ export default function Schedules({ embedded = false }) {
             <h2 className="card-title">{f._id ? 'Sửa lịch hẹn' : 'Thêm lịch hẹn'}</h2>
           </div>
           {!actuators.length && !homeLoading ? (
-            <Empty title="Chưa có thiết bị chấp hành" action={<Link to="/thiet-bi">Đăng ký thiết bị</Link>} />
+            <Empty title="Chưa có thiết bị chấp hành">Liên hệ kỹ thuật viên để lắp thêm quạt, đèn hoặc rèm.</Empty>
           ) : (
             <div className="stack">
               <Field label="Thiết bị" error={fields.component_id}>

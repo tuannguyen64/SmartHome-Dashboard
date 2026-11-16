@@ -98,20 +98,17 @@ export const listPlaces = () => get('/places');
 export const createPlace = (b) => post('/places', b);
 export const updatePlace = (id, b) => patch(`/places/${id}`, b);
 export const deletePlace = (id) => del(`/places/${id}`);
-export const placeDevices = (id, recursive = true) => get(`/places/${id}/devices`, { recursive });
 
 // ---- thiết bị
 export const myDevices = () => get('/devices/mine');
 export const listDevices = (q) => get('/devices', q);
 export const cloneDevices = (b) => post('/devices', b);
 export const getDevice = (id) => get(`/devices/${id}`);
-export const registerDevice = (b) => post('/devices/register', b);
 export const updateDevice = (id, b) => patch(`/devices/${id}`, b);
 export const unregisterDevice = (id) => post(`/devices/${id}/unregister`);
 export const deviceStatus = (id) => get(`/devices/${id}/status`);
 export const deviceLatest = (id) => get(`/devices/${id}/latest`);
 export const deviceData = (id, q) => deviceDataLatestFirst(id, q);
-export const deviceControl = (id, q) => get(`/devices/${id}/control`, q);
 export const deviceCommands = async (id, q) => {
   const r = await get(`/devices/${id}/commands`, q);
   // backend chưa theo dõi kết quả từng lệnh: 'sent' = đã gửi tới Adafruit IO
