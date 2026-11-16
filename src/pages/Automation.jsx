@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api/index.js';
 import { useAction, useApi } from '../hooks/useApi.js';
 import { useHome } from '../hooks/useHome.js';
-import { useLiveEvent } from '../context/RealtimeContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { MetricIcon } from '../components/Device.jsx';
 import { Icon } from '../components/icons.jsx';
 import { Badge, ColorSwatches, Empty, Field, Modal, RangeSlider, Skeleton, Toggle, useConfirm } from '../components/ui.jsx';
-import { CHANNELS, COMMAND_STATUS, metricInfo, RGB_PALETTE, SEVERITY } from '../utils/constants.js';
-import { fmtAction, fmtShortDateTime } from '../utils/format.js';
+import { CHANNELS, metricInfo, RGB_PALETTE, SEVERITY } from '../utils/constants.js';
+import { fmtAction } from '../utils/format.js';
 
 // Điều kiện của một threshold_rule, ví dụ "> 32 °C" hoặc "ngoài 18 – 32 °C"
 function condition(rule, unit) {
@@ -19,7 +17,7 @@ function condition(rule, unit) {
 }
 
 // UC05-1 Ngưỡng cảnh báo + UC04-2 Quy tắc tự động — cùng collection threshold_rules
-export default function Automation() {
+export default function Automation({ embedded = false }) {
   const { home } = useHome();
   const rules = useApi(() => api.listRules(), []);
   const [editing, setEditing] = useState(null);
@@ -28,11 +26,11 @@ export default function Automation() {
   const autoRules = (rules.data ?? []).filter((r) => r.auto_action);
 
   return (
-    <div className="page">
+    <div className={embedded ? 'stack' : 'page'} style={embedded ? { gap: 'var(--gap)' } : undefined}>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Tự động hóa</h1>
-          <p className="page-sub">Ngưỡng cảnh báo và hành động tự động theo cảm biến (threshold_rules)</p>
+          {embedded ? <h2 className="section-title">Ngưỡng cảnh báo và quy tắc</h2> : <h1 className="page-title">Tự động hóa</h1>}
+          <p className="page-sub">Cảnh báo khi cảm biến vượt ngưỡng, kèm hành động tự động nếu cần</p>
         </div>
         <button className="btn btn-primary" onClick={() => setEditing({})} disabled={!home?.sensors.length}>
           <Icon name="plus" size={17} /> Thêm quy tắc
@@ -81,7 +79,6 @@ export default function Automation() {
               </div>
             )}
           </section>
-          <RuleHistory />
         </div>
       </div>
 
@@ -234,53 +231,6 @@ function AutoRow({ rule, ctx, onEdit }) {
       </button>
       <Toggle on={on} onChange={toggle} label="Bật/tắt hành động tự động" />
     </div>
-  );
-}
-
-function RuleHistory() {
-  const history = useApi(() => api.listCommands({ source: 'automation', limit: 6 }).catch(() => ({ items: [] })), []);
-  const { home } = useHome();
-  useLiveEvent('command', (c) => c.source === 'automation' && history.reload({ silent: true }));
-  const items = history.data?.items ?? [];
-  return (
-    <section className="card">
-      <div className="card-head">
-        <h2 className="card-title">Lịch sử kích hoạt</h2>
-        <Link to="/lich-su?source=automation">Xem tất cả</Link>
-      </div>
-      {history.loading && !history.data ? (
-        <Skeleton height={160} />
-      ) : !items.length ? (
-        <Empty>Quy tắc chưa kích hoạt lần nào.</Empty>
-      ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Thời gian</th>
-                <th>Quy tắc</th>
-                <th className="hide-sm">Lệnh</th>
-                <th>Kết quả</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((c) => (
-                <tr key={c._id}>
-                  <td className="nowrap mono">{fmtShortDateTime(c.sent_at)}</td>
-                  <td>{c.ref_name ?? '—'}</td>
-                  <td className="hide-sm muted">{fmtAction(home?.compById.get(c.component_id)?.componentModel, c.payload)}</td>
-                  <td>
-                    <span title={c.reason ?? ''}>
-                      <Badge tone={COMMAND_STATUS[c.status].tone}>{COMMAND_STATUS[c.status].label}</Badge>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
   );
 }
 

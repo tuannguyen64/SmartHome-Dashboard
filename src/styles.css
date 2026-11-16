@@ -363,3 +363,6 @@ img { display: block; }
   .show-sm { display: block; }
   .hist-time { white-space: normal; min-width: 76px; }
 }
+
+/* tiêu đề mục trong trang gộp (Tự động) */
+.section-title { font-size: 20px; font-weight: 600; margin: 8px 0 0; }

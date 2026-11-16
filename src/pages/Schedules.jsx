@@ -28,7 +28,7 @@ const emptyForm = (component_id = '') => ({
 });
 
 // UC04-3 Quản lý lịch hẹn giờ (collection schedules: component_id, action, cron, timezone)
-export default function Schedules() {
+export default function Schedules({ embedded = false }) {
   const toast = useToast();
   const act = useAction();
   const [confirm, dialog] = useConfirm();
@@ -120,10 +120,10 @@ export default function Schedules() {
   const toggleDay = (k) => set('days', f.days.includes(k) ? f.days.filter((d) => d !== k) : [...f.days, k]);
 
   return (
-    <div className="page">
+    <div className={embedded ? 'stack' : 'page'} style={embedded ? { gap: 'var(--gap)' } : undefined} id="hen-gio">
       <div className="page-head">
         <div>
-          <h1 className="page-title">Hẹn giờ</h1>
+          {embedded ? <h2 className="section-title">Hẹn giờ</h2> : <h1 className="page-title">Hẹn giờ</h1>}
           <p className="page-sub">Lên lịch bật/tắt thiết bị tự động (GMT+7) · chỉ chạy khi thiết bị ở chế độ Tự động</p>
         </div>
         <button className="btn btn-primary" onClick={reset}>

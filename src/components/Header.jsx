@@ -9,8 +9,7 @@ import { FigmaIcon, Icon } from './icons.jsx';
 const NAV = [
   { to: '/', label: 'Tổng quan', end: true },
   { to: '/bieu-do', label: 'Biểu đồ' },
-  { to: '/tu-dong-hoa', label: 'Tự động hóa' },
-  { to: '/hen-gio', label: 'Hẹn giờ' },
+  { to: '/tu-dong', label: 'Tự động' },
   { to: '/canh-bao', label: 'Cảnh báo' },
   { to: '/lich-su', label: 'Lịch sử' },
   { to: '/thiet-bi', label: 'Thiết bị' },

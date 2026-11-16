@@ -37,7 +37,10 @@ async function req(method, path, { body, query } = {}) {
       : res.status === 429 ? 'busy' // quá 25 lệnh/phút
       : res.status === 503 ? 'broker' // chưa cấu hình gửi lệnh xuống bo
       : 'error';
-    throw new ApiError(data?.error ?? data?.message ?? `Lỗi ${res.status}`, data?.code ?? code, data?.details ?? {});
+    let message = data?.error ?? data?.message ?? `Lỗi ${res.status}`;
+    // 404 do backend chưa có đường dẫn này: không hiện nguyên URL cho người dùng
+    if (res.status === 404 && /^Không tìm thấy (GET|POST|PATCH|PUT|DELETE) /.test(message)) message = 'Backend chưa hỗ trợ chức năng này';
+    throw new ApiError(message, data?.code ?? code, data?.details ?? {});
   }
   return data;
 }
@@ -92,7 +95,11 @@ export const deviceStatus = (id) => get(`/devices/${id}/status`);
 export const deviceLatest = (id) => get(`/devices/${id}/latest`);
 export const deviceData = (id, q) => deviceDataLatestFirst(id, q);
 export const deviceControl = (id, q) => get(`/devices/${id}/control`, q);
-export const deviceCommands = (id, q) => get(`/devices/${id}/commands`, q);
+export const deviceCommands = async (id, q) => {
+  const r = await get(`/devices/${id}/commands`, q);
+  // backend chưa theo dõi kết quả từng lệnh: 'sent' = đã gửi tới Adafruit IO
+  return { ...r, items: r.items.map((c) => ({ ...c, status: c.status ?? 'sent' })) };
+};
 export const sendDeviceCommand = (id, b) => post(`/devices/${id}/commands`, b);
 
 // ---- ghép dữ liệu theo dạng web dùng

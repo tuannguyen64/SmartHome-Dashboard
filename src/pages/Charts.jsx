@@ -114,7 +114,6 @@ export default function Charts() {
       .filter(Boolean);
 
   const span = win.to - win.from;
-  const [main, ...rest] = sensors;
 
   return (
     <div className="page">
@@ -165,14 +164,10 @@ export default function Charts() {
               <StatCard key={s._id} comp={s} path={home.paths.get(s.place_id)} data={series[s._id]} loading={loading} />
             ))}
           </div>
-          {main && <ChartCard comp={main} path={home.paths.get(main.place_id)} data={series[main._id]} thresholds={thresholdsOf(main)} loading={loading} span={span} win={win} height={300} />}
-          {rest.length > 0 && (
-            <div className="grid grid-2">
-              {rest.map((s) => (
-                <ChartCard key={s._id} comp={s} path={home.paths.get(s.place_id)} data={series[s._id]} thresholds={thresholdsOf(s)} loading={loading} span={span} win={win} height={220} />
-              ))}
-            </div>
-          )}
+          {/* Mọi biểu đồ cùng kích thước (nhiệt độ, độ ẩm, ánh sáng…) */}
+          {sensors.map((s) => (
+            <ChartCard key={s._id} comp={s} path={home.paths.get(s.place_id)} data={series[s._id]} thresholds={thresholdsOf(s)} loading={loading} span={span} win={win} height={300} />
+          ))}
         </>
       )}
     </div>

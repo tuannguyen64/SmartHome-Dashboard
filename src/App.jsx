@@ -6,8 +6,7 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Overview from './pages/Overview.jsx';
 import Charts from './pages/Charts.jsx';
-import Automation from './pages/Automation.jsx';
-import Schedules from './pages/Schedules.jsx';
+import AutoPage from './pages/AutoPage.jsx';
 import Alerts from './pages/Alerts.jsx';
 import ControlHistory from './pages/ControlHistory.jsx';
 import PlacesDevices from './pages/PlacesDevices.jsx';
@@ -50,8 +49,9 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route index element={<Overview />} />
         <Route path="bieu-do" element={<Charts />} />
-        <Route path="tu-dong-hoa" element={<Automation />} />
-        <Route path="hen-gio" element={<Schedules />} />
+        <Route path="tu-dong" element={<AutoPage />} />
+        <Route path="tu-dong-hoa" element={<Navigate to="/tu-dong" replace />} />
+        <Route path="hen-gio" element={<Navigate to="/tu-dong#hen-gio" replace />} />
         <Route path="canh-bao" element={<Alerts />} />
         <Route path="lich-su" element={<ControlHistory />} />
         <Route path="thiet-bi" element={<PlacesDevices />} />
