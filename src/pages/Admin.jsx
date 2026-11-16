@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { useAction, useApi } from '../hooks/useApi.js';
 import { Icon } from '../components/icons.jsx';
 import { Badge, Empty, Field, Modal, Pagination, Skeleton, Toggle, useConfirm } from '../components/ui.jsx';
+import { ROLES } from '../utils/constants.js';
 import { fmtDate } from '../utils/format.js';
 
 // Trang quản lý tài khoản (admin). Thiết bị nằm ở trang Thiết bị dùng chung (DeveloperDevices).
@@ -15,7 +16,7 @@ export default function Admin() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Quản lý User</h1>
-          <p className="page-sub">Tài khoản của người dùng sử dụng thiết bị nhà thông minh</p>
+          <p className="page-sub">Mọi tài khoản trong hệ thống: người dùng, kỹ thuật viên và quản trị viên</p>
         </div>
       </div>
       <Users />
@@ -30,10 +31,9 @@ function Users() {
   const toast = useToast();
   const act = useAction();
   const [confirm, dialog] = useConfirm();
-  // Chỉ quản lý tài khoản người dùng (khách hàng dùng thiết bị); admin / developer không hiện ở đây
-  const [q, setQ] = useState({ search: '', status: '', page: 1 });
+  const [q, setQ] = useState({ search: '', role: '', status: '', page: 1 });
   const [modal, setModal] = useState(null);
-  const list = useApi(() => api.listUsers({ ...q, role: 'user', limit: 10 }), [q.search, q.status, q.page]);
+  const list = useApi(() => api.listUsers({ ...q, limit: 10 }), [q.search, q.role, q.status, q.page]);
   const done = () => {
     setModal(null);
     list.reload({ silent: true });
@@ -62,7 +62,11 @@ function Users() {
     <section className="card">
       <div className="card-head">
         <div className="filters">
-          <input className="input" style={{ width: 260 }} placeholder="Tìm tên, username hoặc email" value={q.search} onChange={(e) => setQ({ ...q, search: e.target.value, page: 1 })} />
+          <input className="input" style={{ width: 260 }} placeholder="Tìm tên, username, email hoặc SĐT" value={q.search} onChange={(e) => setQ({ ...q, search: e.target.value, page: 1 })} />
+          <select className="select" style={{ width: 170 }} value={q.role} onChange={(e) => setQ({ ...q, role: e.target.value, page: 1 })} aria-label="Lọc theo vai trò">
+            <option value="">Tất cả vai trò</option>
+            {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
           <select className="select" style={{ width: 170 }} value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value, page: 1 })} aria-label="Lọc theo trạng thái tài khoản">
             <option value="">Mọi trạng thái</option>
             <option value="active">Hoạt động</option>
@@ -87,8 +91,9 @@ function Users() {
                 <tr>
                   <th>Tên đăng nhập</th>
                   <th>Họ tên</th>
-                  <th className="hide-sm">Email</th>
+                  <th className="hide-sm">Liên hệ</th>
                   <th>Thiết bị</th>
+                  <th>Vai trò</th>
                   <th className="hide-sm">Telegram</th>
                   <th className="hide-sm">Tạo lúc</th>
                   <th>Hoạt động</th>
@@ -102,8 +107,9 @@ function Users() {
                       <strong>{u.username}</strong> {u._id === me._id && <Badge>bạn</Badge>}
                     </td>
                     <td>{u.full_name}</td>
-                    <td className="hide-sm">{u.email ?? '—'}</td>
-                    <td>{u.device_count ?? 0}</td>
+                    <td className="hide-sm">{u.email ?? '—'}{u.phone && <span className="admin-log-id">{u.phone}</span>}</td>
+                    <td>{u.role === 'user' ? u.device_count ?? 0 : '—'}</td>
+                    <td><Badge tone={ROLES[u.role]?.tone}>{ROLES[u.role]?.label ?? u.role}</Badge></td>
                     <td className="hide-sm mono muted">{u.telegram_chat_id ?? '—'}</td>
                     <td className="hide-sm muted">{fmtDate(u.created_at)}</td>
                     <td>
@@ -137,9 +143,10 @@ function Users() {
 }
 
 function UserForm({ user, onClose, onDone }) {
+  const { user: me } = useAuth();
   const toast = useToast();
   const act = useAction();
-  const [f, setF] = useState({ username: '', password: '', full_name: user?.full_name ?? '', email: user?.email ?? '', role: 'user', telegram_chat_id: user?.telegram_chat_id ?? '' });
+  const [f, setF] = useState({ username: '', password: '', full_name: user?.full_name ?? '', email: user?.email ?? '', role: user?.role ?? 'user', phone: user?.phone ?? '', address: user?.address ?? '', telegram_chat_id: user?.telegram_chat_id ?? '' });
   const [fields, setFields] = useState({});
   const [error, setError] = useState(null);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -148,7 +155,7 @@ function UserForm({ user, onClose, onDone }) {
     setFields({});
     setError(null);
     try {
-      if (user) await act(() => api.updateUser(user._id, { full_name: f.full_name, email: f.email || null, telegram_chat_id: f.telegram_chat_id || null }));
+      if (user) await act(() => api.updateUser(user._id, { full_name: f.full_name, email: f.email || null, phone: f.phone || null, address: f.address || null, role: f.role, telegram_chat_id: f.telegram_chat_id || null }));
       else await act(() => api.createUser({ ...f, telegram_chat_id: f.telegram_chat_id || null }));
       toast.success(user ? 'Đã cập nhật tài khoản.' : 'Đã tạo tài khoản.');
       onDone();
@@ -158,7 +165,7 @@ function UserForm({ user, onClose, onDone }) {
     }
   };
   return (
-    <Modal title={user ? `Sửa tài khoản: ${user.username}` : 'Tạo tài khoản người dùng'} onClose={onClose} width={520}>
+    <Modal title={user ? `Sửa tài khoản: ${user.username}` : 'Tạo tài khoản'} onClose={onClose} width={520}>
       <form className="form-grid" onSubmit={submit}>
         <Field label="Họ và tên" className="full">
           <input className="input" value={f.full_name} onChange={set('full_name')} autoFocus />
@@ -176,6 +183,17 @@ function UserForm({ user, onClose, onDone }) {
             </Field>
           </>
         )}
+        <Field label="Số điện thoại" error={fields.phone}>
+          <input className="input" type="tel" value={f.phone} onChange={set('phone')} />
+        </Field>
+        <Field label="Vai trò">
+          <select className="select" value={f.role} onChange={set('role')} disabled={user?._id === me?._id}>
+            {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Địa chỉ nhà" className="full">
+          <input className="input" value={f.address} onChange={set('address')} placeholder="Dùng cho tài khoản người dùng" />
+        </Field>
         <Field label="Telegram chat ID" className="full">
           <input className="input" value={f.telegram_chat_id} onChange={set('telegram_chat_id')} />
         </Field>

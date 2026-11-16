@@ -640,9 +640,18 @@ export function logout() {
 
 export const me = () => respond(() => pub(requireUser()), 50);
 
-export function updateMe({ full_name, telegram_chat_id }) {
+export function updateMe({ full_name, telegram_chat_id, email, phone, address }) {
   return respond(() => {
     const u = requireUser();
+    if (email !== undefined) {
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ApiError('Email không hợp lệ', 'validation', { fields: { email: 'Email không hợp lệ' } });
+      u.email = email || null;
+    }
+    if (phone !== undefined) {
+      if (phone && !/^\+?[0-9 .-]{8,20}$/.test(phone)) throw new ApiError('Số điện thoại không hợp lệ', 'validation', { fields: { phone: 'Số điện thoại không hợp lệ' } });
+      u.phone = phone || null;
+    }
+    if (address !== undefined) u.address = String(address ?? '').trim() || null;
     if (full_name !== undefined) {
       if (!String(full_name).trim()) throw new ApiError('Họ tên không được để trống', 'validation', { fields: { full_name: 'Bắt buộc' } });
       u.full_name = full_name.trim();
@@ -694,7 +703,7 @@ export function createUser(body) {
     if (body.email && db.users.some((u) => u.email?.toLowerCase() === body.email.toLowerCase())) throw new ApiError('Email đã được sử dụng', 'conflict', { fields: { email: 'Đã tồn tại' } });
     const u = {
       _id: oid(), username: body.username, password: fakeHash(body.password), full_name: body.full_name || body.username,
-      email: body.email || null, role: body.role || 'user', telegram_chat_id: body.telegram_chat_id || null, is_active: true, failed_attempts: 0, locked_until: null, created_at: iso(),
+      email: body.email || null, phone: body.phone || null, address: body.address || null, role: body.role || 'user', telegram_chat_id: body.telegram_chat_id || null, is_active: true, failed_attempts: 0, locked_until: null, created_at: iso(),
     };
     db.users.push(u);
     writeAudit({ action: 'user.created', userId: actor._id, username: actor.username, details: `Tạo tài khoản ${u.username} với vai trò ${u.role}` });
@@ -710,7 +719,7 @@ export function updateUser(id, body) {
     if (id === me._id && body.role && body.role !== 'admin') throw new ApiError('Không thể tự hạ quyền của chính mình', 'validation');
     if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) throw new ApiError('Email không hợp lệ', 'validation', { fields: { email: 'Email không hợp lệ' } });
     if (body.email && db.users.some((user) => user._id !== id && user.email?.toLowerCase() === body.email.toLowerCase())) throw new ApiError('Email đã được sử dụng', 'conflict', { fields: { email: 'Đã tồn tại' } });
-    for (const k of ['full_name', 'email', 'role', 'telegram_chat_id', 'is_active']) if (k in body) u[k] = body[k];
+    for (const k of ['full_name', 'email', 'phone', 'address', 'role', 'telegram_chat_id', 'is_active']) if (k in body) u[k] = body[k];
     if (body.is_active === true) u.locked_until = null;
     writeAudit({ action: 'user.updated', userId: me._id, username: me.username, details: `Cập nhật tài khoản ${u.username}: ${Object.keys(body).join(', ')}` });
     return pub(u);
@@ -1254,7 +1263,7 @@ export function testAdminAlertChannel(metric, channel) {
 
 export function listAdminLogs({ user_id, device_id, level, from, to, search = '', page: p = 1, limit = 20 } = {}) {
   return respond(() => {
-    requireRole(requireUser(), ['admin', 'developer']);
+    requireRole(requireUser(), ['admin']);
     const usersById = new Map(db.users.map((user) => [user._id, user]));
     const devicesById = new Map(db.devices.map((device) => [device._id, device]));
     const commandLogs = db.commands.map((command) => {
@@ -1410,6 +1419,93 @@ export function unregisterDevice(id) {
     db.threshold_rules.forEach((r) => (ids.has(r.component_id) || ids.has(r.auto_action?.component_id)) && (r.enabled = false));
     db.schedules.forEach((s) => ids.has(s.component_id) && (s.enabled = false));
     return { ok: true };
+  });
+}
+
+// Chủ sở hữu + quy tắc tự động + lịch hẹn của một thiết bị (admin, developer)
+export function deviceOwnerInfo(id) {
+  return respond(() => {
+    requireRole(requireUser(), ['admin', 'developer']);
+    const d = must(byId(db.devices, id), 'thiết bị');
+    const owner = d.owner_id ? byId(db.users, d.owner_id) : null;
+    const compIds = new Set(compsOf(d).map((c) => c._id));
+    const compLabel = (cid) => {
+      const c = byId(db.components, cid);
+      return c ? cmOf(c).label || c.name : 'Linh kiện đã xóa';
+    };
+    const devName = (cid) => byId(db.devices, byId(db.components, cid)?.device_id)?.device_name ?? null;
+    const place = d.place_id ? byId(db.places, d.place_id) : null;
+    const path = (p) => (p ? [...(p.ancestors ?? []).map((a) => byId(db.places, a)?.name).filter(Boolean), p.name].join(' › ') : null);
+    const days = (cron) => {
+      const x = cron.split(' ')[4];
+      return x === '*' ? [] : x.split(',').map(Number);
+    };
+    return {
+      device_id: d._id,
+      place_path: path(place),
+      owner: owner ? { _id: owner._id, username: owner.username, full_name: owner.full_name, email: owner.email ?? null, phone: owner.phone ?? null, address: owner.address ?? null, is_active: owner.is_active !== false, deleted: false } : null,
+      rules: db.threshold_rules
+        .filter((r) => compIds.has(r.component_id) || compIds.has(r.auto_action?.component_id))
+        .map((r) => ({
+          _id: r._id, name: r.name, enabled: r.enabled, sensor: compLabel(r.component_id), unit: cmOf(byId(db.components, r.component_id) ?? {})?.unit ?? '',
+          sensor_device: devName(r.component_id), min: r.min, max: r.max, severity: r.severity, channels: r.channels,
+          auto_action: r.auto_action ? {
+            enabled: r.auto_action.enabled !== false, device: devName(r.auto_action.component_id), component: compLabel(r.auto_action.component_id),
+            on_breach: r.auto_action.on_breach ? { mode: r.auto_action.on_breach.mode, val: r.auto_action.on_breach.value ?? null } : null,
+            on_resolve: r.auto_action.on_resolve ? { mode: r.auto_action.on_resolve.mode, val: r.auto_action.on_resolve.value ?? null } : null,
+          } : null,
+        })),
+      schedules: db.schedules
+        .filter((x) => compIds.has(x.component_id))
+        .map((x) => {
+          const [m, h] = x.cron.split(' ');
+          return {
+            _id: x._id, name: x.name, enabled: x.enabled, time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, days: days(x.cron),
+            component: compLabel(x.component_id), action: { mode: x.action.mode, val: x.action.value ?? null }, last_run_at: x.last_run_at,
+          };
+        }),
+    };
+  });
+}
+
+// Lịch sử lệnh mọi thiết bị đã tạo (admin, developer)
+export function listStaffCommands({ device_id, source, from, to, search = '', page: p = 1, limit = 20 } = {}) {
+  return respond(() => {
+    requireRole(requireUser(), ['admin', 'developer']);
+    const f = from ? new Date(from).getTime() : -Infinity;
+    const t = to ? new Date(to).getTime() : Infinity;
+    const q = String(search).trim().toLowerCase();
+    const userName = (id) => byId(db.users, id);
+    const rows = db.commands
+      .filter((c) => {
+        if (device_id && c.device_id !== device_id) return false;
+        if (source && c.source !== source) return false;
+        const at = new Date(c.sent_at).getTime();
+        if (at < f || at > t) return false;
+        if (!q) return true;
+        const d = byId(db.devices, c.device_id);
+        const u = c.issued_by ? userName(c.issued_by) : null;
+        return [d?.device_name, u?.username, u?.full_name].filter(Boolean).some((x) => x.toLowerCase().includes(q));
+      })
+      .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))
+      .map((c) => {
+        const d = byId(db.devices, c.device_id);
+        const owner = d?.owner_id ? userName(d.owner_id) : null;
+        const by = c.issued_by ? userName(c.issued_by) : null;
+        const cm = byId(db.component_models, c.component_model_id);
+        return {
+          _id: c._id, sent_at: c.sent_at, device_id: c.device_id, device_name: d?.device_name ?? 'Thiết bị đã xóa', owner_name: owner?.full_name ?? null,
+          component: cm ? cm.label || cm.name : 'Linh kiện', unit: cm?.unit ?? '', source: c.source,
+          payload: { mode: c.payload?.mode, val: c.payload?.val ?? c.payload?.value ?? null },
+          issued_by: by ? { username: by.username, full_name: by.full_name } : null,
+        };
+      });
+    const n = Math.min(100, Math.max(1, Number(limit) || 20));
+    const pg = Math.max(1, Number(p) || 1);
+    return {
+      items: rows.slice((pg - 1) * n, pg * n), total: rows.length, page: pg, limit: n,
+      filters: { devices: db.devices.map((d) => ({ id: d._id, name: d.device_name })) },
+    };
   });
 }
 

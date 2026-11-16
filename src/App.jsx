@@ -18,6 +18,8 @@ import AdminSettings from './pages/AdminSettings.jsx';
 import DeveloperCatalog from './pages/DeveloperCatalog.jsx';
 import DeveloperDevices from './pages/DeveloperDevices.jsx';
 import DeveloperDiagnostics from './pages/DeveloperDiagnostics.jsx';
+import AdminDevicesHub from './pages/AdminDevicesHub.jsx';
+import StaffCommands from './pages/StaffCommands.jsx';
 import Profile from './pages/Profile.jsx';
 
 function StaffOnly({ children }) {
@@ -67,8 +69,8 @@ export default function App() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<AdminOnly><Admin /></AdminOnly>} />
-        <Route path="catalog" element={<DeveloperCatalog />} />
-        <Route path="devices" element={<DeveloperDevices />} />
+        <Route path="catalog" element={<Navigate to="/admin/devices?tab=danh-muc" replace />} />
+        <Route path="devices" element={<AdminDevicesHub />} />
         <Route path="devices/:deviceId" element={<DeveloperDiagnostics />} />
         <Route path="logs" element={<AdminLogs />} />
         <Route path="settings" element={<AdminOnly><AdminSettings /></AdminOnly>} />
@@ -81,7 +83,8 @@ export default function App() {
         <Route path="devices/:deviceId" element={<DeveloperDiagnostics />} />
         <Route path="diagnostics" element={<Navigate to="/developer/devices" replace />} />
         <Route path="diagnostics/:deviceId" element={<DiagnosticsRedirect />} />
-        <Route path="logs" element={<AdminLogs />} />
+        <Route path="commands" element={<StaffCommands />} />
+        <Route path="logs" element={<Navigate to="/developer/commands" replace />} />
         <Route path="ca-nhan" element={<Profile />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

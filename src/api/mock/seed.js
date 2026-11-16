@@ -8,7 +8,7 @@
 
 import { syntheticValue } from './synthetic.js';
 
-export const SEED_VERSION = 13;
+export const SEED_VERSION = 14;
 export const DEMO_PASSWORD = '123456';
 
 // Băm giả cho chế độ demo. Backend thật dùng bcrypt (NFR4).
@@ -53,6 +53,7 @@ export function createSeed(now = Date.now()) {
   const admin = mkUser('admin', 'Nguyễn Đức Tuấn', 'admin');
   const dev = mkUser('dev', 'Bùi Phước Thịnh', 'developer');
   const tuan = mkUser('tuan', 'Nguyễn Đức Tuấn', 'user');
+  Object.assign(tuan, { phone: '0901 234 567', address: '268 Lý Thường Kiệt, Phường 14, Quận 10, TP.HCM' });
 
   // ---------------------------------------------------------------- types
   const tFan = { _id: oid(), name: 'Quạt', code: 'fan', url_img: null };

@@ -85,6 +85,9 @@ export const createDeviceModel = (b) => post('/device-models', b);
 export const updateDeviceModel = (id, b) => patch(`/device-models/${id}`, b);
 export const deleteDeviceModel = (id) => del(`/device-models/${id}`);
 export const deleteDevice = (id) => del(`/devices/${id}`);
+// Nhân viên (admin, developer): chủ sở hữu + quy tắc của thiết bị, lịch sử lệnh toàn hệ thống
+export const deviceOwnerInfo = (id) => get(`/devices/${id}/owner-info`);
+export const listStaffCommands = (q) => get('/admin/commands', q);
 
 // ---- vị trí
 export const listPlaces = () => get('/places');

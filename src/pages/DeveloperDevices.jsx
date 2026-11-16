@@ -12,7 +12,7 @@ import './developer.css';
 const PAGE_SIZE = 12;
 
 // Kho thiết bị (admin + developer): cấp thiết bị theo mẫu, mở Chi tiết để đổi tên hoặc xóa
-export default function DeveloperDevices() {
+export default function DeveloperDevices({ embedded = false }) {
   const { user } = useAuth();
   const base = user?.role === 'developer' ? '/developer' : '/admin';
   const [filters, setFilters] = useState({ search: '', registered: '', status: '', type_id: '', place_id: '', page: 1 });
@@ -57,13 +57,15 @@ export default function DeveloperDevices() {
   );
 
   return (
-    <div className="page developer-page">
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">Thiết bị</h1>
-          <p className="page-sub">Cấp thiết bị mới theo mẫu, theo dõi trạng thái và quản lý từng thiết bị trong kho.</p>
+    <div className={embedded ? undefined : 'page developer-page'}>
+      {!embedded && (
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Thiết bị</h1>
+            <p className="page-sub">Cấp thiết bị mới theo mẫu, theo dõi trạng thái và quản lý từng thiết bị trong kho.</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <form className="card developer-provision-form" onSubmit={createDevices}>
         <div className="card-head">

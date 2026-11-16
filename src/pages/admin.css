@@ -30,6 +30,7 @@
 .admin-log-clear { height: 36px; white-space: nowrap; }
 .admin-log-clear:disabled { visibility: hidden; }
 .admin-log-user-filter { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; color: var(--text-2); font-size: 13px; }
+.admin-command-filter-grid { grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(140px, 1fr)) auto; }
 @media (max-width: 900px) {
   .admin-log-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-log-search { grid-column: 1 / -1; }
@@ -121,8 +122,6 @@
 .admin-account-button:hover, .admin-account-button.active { background: var(--surface-2); text-decoration: none; }
 .admin-account-button .hdr-user-text span { color: #4f46e5; }
 .admin-account-button .avatar { background: #4f46e5; }
-.admin-logout { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text-2); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
-.admin-logout:hover { border-color: #fecaca; background: #fef2f2; color: var(--red); }
 .admin-main { min-height: calc(100vh - var(--header-h)); }
 
 @media (max-width: 1250px) {
@@ -142,8 +141,6 @@
   .admin-hdr-right { margin-left: auto; gap: 7px; }
   .admin-account-button .hdr-user-text, .admin-connection-label { display: none; }
   .admin-account-button .avatar { width: 34px; height: 34px; }
-  .admin-logout { width: 38px; padding: 0; justify-content: center; }
-  .admin-logout span { display: none; }
   .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .admin-metric { padding: 15px; }
   .admin-metric-value { font-size: 24px; }

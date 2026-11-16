@@ -16,6 +16,7 @@ export default function Profile() {
   const pwdRef = useRef(null);
   const tgRef = useRef(null);
   const stats = useApi(async () => {
+    if (user?.role !== 'user') return null;
     const [devices, rules, schedules] = await Promise.all([
       api.myDevices(),
       api.listRules().catch(() => []),
@@ -24,6 +25,7 @@ export default function Profile() {
     return { devices: devices.length, rules: rules.length, schedules: schedules.length };
   }, []);
   const name = user?.full_name || user?.username || '';
+  const staff = user?.role === 'admin' || user?.role === 'developer';
   const scroll = (ref) => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   return (
@@ -41,14 +43,17 @@ export default function Profile() {
             <div className="profile-avatar">{name.trim().split(/\s+/).pop().charAt(0).toUpperCase()}</div>
             <div className="profile-name">{name}</div>
             <div className="muted">@{user?.username}</div>
-            <div style={{ marginTop: 8 }}>
-              <Badge tone={ROLES[user?.role]?.tone}>{ROLES[user?.role]?.label}</Badge>
-            </div>
-            <div className="profile-stats">
-              <div><strong>{stats.data?.devices ?? '–'}</strong><span>Thiết bị</span></div>
-              <div><strong>{stats.data?.rules ?? '–'}</strong><span>Quy tắc</span></div>
-              <div><strong>{stats.data?.schedules ?? '–'}</strong><span>Lịch hẹn</span></div>
-            </div>
+            {staff ? (
+              <div style={{ marginTop: 8 }}>
+                <Badge tone={ROLES[user?.role]?.tone}>{ROLES[user?.role]?.label}</Badge>
+              </div>
+            ) : (
+              <div className="profile-stats">
+                <div><strong>{stats.data?.devices ?? '–'}</strong><span>Thiết bị</span></div>
+                <div><strong>{stats.data?.rules ?? '–'}</strong><span>Quy tắc</span></div>
+                <div><strong>{stats.data?.schedules ?? '–'}</strong><span>Lịch hẹn</span></div>
+              </div>
+            )}
           </section>
           <nav className="card side-menu">
             <button className="active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
@@ -82,15 +87,33 @@ function BasicInfo({ tgRef }) {
   const toast = useToast();
   const act = useAction();
   const [editing, setEditing] = useState(false);
-  const [f, setF] = useState({ full_name: user.full_name ?? '', telegram_chat_id: user.telegram_chat_id ?? '' });
+  const staff = user.role === 'admin' || user.role === 'developer';
+  const initial = () => ({
+    full_name: user.full_name ?? '',
+    email: user.email ?? '',
+    phone: user.phone ?? '',
+    address: user.address ?? '',
+    telegram_chat_id: user.telegram_chat_id ?? '',
+  });
+  const [f, setF] = useState(initial);
+  const [fields, setFields] = useState({});
   const [busy, setBusy] = useState(false);
   const save = async () => {
     setBusy(true);
+    setFields({});
     try {
-      setUser(await act(() => api.updateMe({ full_name: f.full_name, telegram_chat_id: f.telegram_chat_id || null })));
+      const body = {
+        full_name: f.full_name,
+        email: f.email.trim() || null,
+        phone: f.phone.trim() || null,
+        telegram_chat_id: f.telegram_chat_id || null,
+        ...(staff ? {} : { address: f.address.trim() || null }),
+      };
+      setUser(await act(() => api.updateMe(body)));
       setEditing(false);
       toast.success('Đã cập nhật hồ sơ.');
     } catch (e) {
+      setFields(e.details?.fields ?? {});
       toast.error(e.message);
     } finally {
       setBusy(false);
@@ -102,7 +125,7 @@ function BasicInfo({ tgRef }) {
         <h2 className="card-title">Thông tin cơ bản</h2>
         {editing ? (
           <div className="inline">
-            <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setF({ full_name: user.full_name ?? '', telegram_chat_id: user.telegram_chat_id ?? '' }); }}>Hủy</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setFields({}); setF(initial()); }}>Hủy</button>
             <button className="btn btn-primary btn-sm" onClick={save} disabled={busy}>Lưu</button>
           </div>
         ) : (
@@ -118,12 +141,26 @@ function BasicInfo({ tgRef }) {
         <Field label="Tên đăng nhập">
           <input className="input" value={user.username} disabled />
         </Field>
-        <Field label="Vai trò">
-          <input className="input" value={ROLES[user.role]?.label ?? user.role} disabled />
+        <Field label="Email" error={fields.email}>
+          <input className="input" type="email" value={editing ? f.email : user.email ?? ''} placeholder="Chưa khai báo" disabled={!editing} onChange={(e) => setF({ ...f, email: e.target.value })} />
         </Field>
-        <Field label="Ngày tạo tài khoản">
-          <input className="input" value={fmtDate(user.created_at)} disabled />
+        <Field label="Số điện thoại" error={fields.phone}>
+          <input className="input" type="tel" value={editing ? f.phone : user.phone ?? ''} placeholder="Chưa khai báo" disabled={!editing} onChange={(e) => setF({ ...f, phone: e.target.value })} />
         </Field>
+        {staff ? (
+          <>
+            <Field label="Vai trò">
+              <input className="input" value={ROLES[user.role]?.label ?? user.role} disabled />
+            </Field>
+            <Field label="Ngày tạo tài khoản">
+              <input className="input" value={fmtDate(user.created_at)} disabled />
+            </Field>
+          </>
+        ) : (
+          <Field label="Địa chỉ nhà" className="full" hint="Kỹ thuật viên dùng địa chỉ này khi đến lắp đặt hoặc bảo trì thiết bị.">
+            <input className="input" value={editing ? f.address : user.address ?? ''} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" disabled={!editing} onChange={(e) => setF({ ...f, address: e.target.value })} />
+          </Field>
+        )}
         <div className="full" ref={tgRef}>
           <Field label="Telegram chat ID" hint="Nhắn /start cho bot của hệ thống trên Telegram để lấy chat ID. Cần có để nhận cảnh báo qua Telegram.">
             <input className="input mono" value={editing ? f.telegram_chat_id : user.telegram_chat_id ?? ''} placeholder="Chưa khai báo" disabled={!editing} onChange={(e) => setF({ ...f, telegram_chat_id: e.target.value.trim() })} />

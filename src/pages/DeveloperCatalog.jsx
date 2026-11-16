@@ -16,7 +16,7 @@ const SECTIONS = [
 const NOUN = { models: 'mẫu thiết bị', components: 'linh kiện', types: 'loại thiết bị' };
 
 // Danh mục phần cứng (admin + developer): xem, thêm, sửa, xóa loại thiết bị / linh kiện / mẫu thiết bị
-export default function DeveloperCatalog() {
+export default function DeveloperCatalog({ embedded = false }) {
   const { user } = useAuth();
   const [section, setSection] = useState('models');
   const [search, setSearch] = useState('');
@@ -88,14 +88,16 @@ export default function DeveloperCatalog() {
   );
 
   return (
-    <div className="page developer-page">
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">Danh mục phần cứng</h1>
-          <p className="page-sub">Quản lý loại thiết bị, linh kiện và mẫu thiết bị dùng để cấp thiết bị mới.</p>
+    <div className={embedded ? undefined : 'page developer-page'}>
+      {!embedded && (
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Danh mục phần cứng</h1>
+            <p className="page-sub">Quản lý loại thiết bị, linh kiện và mẫu thiết bị dùng để cấp thiết bị mới.</p>
+          </div>
+          <Badge tone="blue" dot>{user?.role === 'admin' ? 'Quản trị viên' : 'Developer'}</Badge>
         </div>
-        <Badge tone="blue" dot>{user?.role === 'admin' ? 'Quản trị viên' : 'Developer'}</Badge>
-      </div>
+      )}
 
       <div className="developer-summary">
         <article className="card developer-summary-card">

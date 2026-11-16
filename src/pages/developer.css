@@ -106,3 +106,17 @@
 @media (max-width: 640px) {
   .developer-check-groups { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Chi tiết thiết bị: chủ sở hữu + quy tắc tự động */
+.developer-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--gap); margin: var(--gap) 0; align-items: start; }
+.developer-owner-card, .developer-automation-card { padding: 20px; }
+.developer-owner-facts { display: grid; gap: 14px; margin: 4px 0 0; }
+.developer-owner-facts dt { color: var(--muted); font-size: 12px; }
+.developer-owner-facts dd { margin: 4px 0 0; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.developer-rule-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.developer-rule-list li { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.developer-rule-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.developer-rule-list p { margin: 6px 0 0; color: var(--text-2); font-size: 13px; line-height: 1.5; }
+@media (max-width: 900px) {
+  .developer-detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
