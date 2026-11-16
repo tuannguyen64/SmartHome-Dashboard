@@ -1,50 +1,14 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { api } from '../api/index.js';
-import { Badge, Empty, Field, Skeleton } from '../components/ui.jsx';
+import { Badge, Empty, Skeleton } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
 import { useApi } from '../hooks/useApi.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { fmtDateTime, fmtValue } from '../utils/format.js';
 import { metricInfo } from '../utils/constants.js';
 import './developer.css';
 
 const POLL_MS = 10000;
-
-function DiagnosticsPicker() {
-  const [search, setSearch] = useState('');
-  const devices = useApi(() => api.listDevices({ search, page: 1, limit: 30 }), [search]);
-  return (
-    <div className="page developer-page">
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">Chẩn đoán thiết bị</h1>
-          <p className="page-sub">Chọn thiết bị để xem telemetry, kết nối và các lệnh gần đây.</p>
-        </div>
-      </div>
-      <section className="card developer-catalog">
-        <Field label="Tìm thiết bị">
-          <input className="input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tên thiết bị, chủ sở hữu hoặc ID..." />
-        </Field>
-        {devices.error && <div className="alert-box alert-box-red" role="alert">{devices.error.message}</div>}
-        {devices.loading && !devices.data ? <Skeleton height={220} /> : devices.data?.items.length ? (
-          <div className="developer-picker-list">
-            {devices.data.items.map((device) => (
-              <Link className="developer-picker-item" key={device._id} to={`/developer/diagnostics/${device._id}`}>
-                <span>
-                  <strong>{device.device_name}</strong>
-                  <small>{device.model_name ?? device.type_name ?? 'Chưa phân loại'} · {device.owner_name ?? 'Chưa đăng ký'}</small>
-                </span>
-                {!device.owner_id ? <Badge tone="gray">Chưa đăng ký</Badge> : device.online ? <Badge tone="green" dot>Online</Badge> : <Badge tone="red" dot>Offline</Badge>}
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <Empty title="Không tìm thấy thiết bị">Thử từ khóa khác.</Empty>
-        )}
-      </section>
-    </div>
-  );
-}
 
 function ComponentCard({ component }) {
   const model = component.componentModel ?? {};
@@ -75,7 +39,8 @@ function ComponentCard({ component }) {
   );
 }
 
-function DeviceDiagnostics({ deviceId }) {
+// Chi tiết một thiết bị (admin + developer): kết nối, dữ liệu mới nhất, linh kiện, lệnh gần đây
+function DeviceDetail({ deviceId, base }) {
   const device = useApi(() => api.getDevice(deviceId), [deviceId], { poll: POLL_MS });
   const status = useApi(() => api.deviceStatus(deviceId), [deviceId], { poll: POLL_MS });
   const latest = useApi(() => api.deviceLatest(deviceId), [deviceId], { poll: POLL_MS });
@@ -97,7 +62,7 @@ function DeviceDiagnostics({ deviceId }) {
   if (error && !device.data) {
     return (
       <div className="page developer-page">
-        <Link className="developer-back-link" to="/developer/devices">← Trở lại kho thiết bị</Link>
+        <Link className="developer-back-link" to={`${base}/devices`}>← Trở lại danh sách thiết bị</Link>
         <div className="alert-box alert-box-red" role="alert">{error.message}</div>
       </div>
     );
@@ -109,10 +74,10 @@ function DeviceDiagnostics({ deviceId }) {
 
   return (
     <div className="page developer-page">
-      <Link className="developer-back-link" to="/developer/devices">← Trở lại kho thiết bị</Link>
+      <Link className="developer-back-link" to={`${base}/devices`}>← Trở lại danh sách thiết bị</Link>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Chẩn đoán thiết bị</h1>
+          <h1 className="page-title">Chi tiết thiết bị</h1>
           <p className="page-sub">Kiểm tra kết nối, dữ liệu mới nhất, linh kiện và lịch sử lệnh.</p>
         </div>
         <button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}>
@@ -131,7 +96,7 @@ function DeviceDiagnostics({ deviceId }) {
           <div className="developer-device-id">Device ID: <code>{device.data?._id ?? deviceId}</code></div>
         </div>
         <dl className="developer-device-facts">
-          <div><dt>Chủ sở hữu</dt><dd>{device.data?.owner_id ? 'Đã đăng ký' : 'Chưa đăng ký'}</dd></div>
+          <div><dt>Chủ sở hữu</dt><dd>{device.data?.owner_id ? device.data.owner_name ?? 'Đã đăng ký' : 'Chưa đăng ký'}</dd></div>
           <div><dt>Tin cuối</dt><dd>{status.data?.last_seen ? fmtDateTime(status.data.last_seen) : 'Chưa nhận dữ liệu'}</dd></div>
           <div><dt>Thời gian offline</dt><dd>{status.data?.seconds_since_last_seen == null ? '—' : `${status.data.seconds_since_last_seen} giây`}</dd></div>
           <div><dt>Ngưỡng offline</dt><dd>{status.data?.offline_after_seconds == null ? '—' : `${status.data.offline_after_seconds} giây`}</dd></div>
@@ -189,5 +154,7 @@ function DeviceDiagnostics({ deviceId }) {
 
 export default function DeveloperDiagnostics() {
   const { deviceId } = useParams();
-  return deviceId ? <DeviceDiagnostics deviceId={deviceId} /> : <DiagnosticsPicker />;
+  const { user } = useAuth();
+  const base = user?.role === 'developer' ? '/developer' : '/admin';
+  return deviceId ? <DeviceDetail deviceId={deviceId} base={base} /> : <Navigate to={`${base}/devices`} replace />;
 }

@@ -748,6 +748,105 @@ export function deleteUser(id) {
 export const listTypes = () => respond(() => (requireUser(), db.types));
 export const listComponentModels = () => respond(() => (requireUser(), db.component_models));
 export const listDeviceModels = () => respond(() => (requireUser(), db.device_models));
+// Thêm / sửa / xóa danh mục (admin, developer)
+function catalogWrite(fn) {
+  return respond(() => {
+    const u = requireUser();
+    requireRole(u, ['admin', 'developer']);
+    return fn(u);
+  }, 150);
+}
+const uniqueName = (list, name, id, what) => {
+  if (!String(name ?? '').trim()) throw new ApiError(`Nhập tên ${what}`, 'validation', { fields: { name: 'Bắt buộc' } });
+  if (list.some((x) => x._id !== id && x.name.toLowerCase() === String(name).trim().toLowerCase())) {
+    throw new ApiError(`Tên ${what} đã tồn tại`, 'conflict', { fields: { name: 'Đã tồn tại' } });
+  }
+};
+
+export const createType = (body) => catalogWrite(() => {
+  uniqueName(db.types, body.name, null, 'loại thiết bị');
+  const t = { _id: oid(), name: body.name.trim(), url_img: body.url_img ?? null };
+  db.types.push(t);
+  return t;
+});
+export const updateType = (id, body) => catalogWrite(() => {
+  const t = must(byId(db.types, id), 'loại thiết bị');
+  if (body.name !== undefined) {
+    uniqueName(db.types, body.name, id, 'loại thiết bị');
+    t.name = body.name.trim();
+  }
+  return t;
+});
+export const deleteType = (id) => catalogWrite(() => {
+  const t = must(byId(db.types, id), 'loại thiết bị');
+  const used = db.devices.filter((d) => d.type_id === id).length;
+  if (used) throw new ApiError(`Loại thiết bị đang được dùng bởi ${used} thiết bị`, 'conflict');
+  const models = db.device_models.filter((m) => m.type_id === id).length;
+  if (models) throw new ApiError(`Loại thiết bị đang được dùng bởi ${models} mẫu thiết bị`, 'conflict');
+  db.types = db.types.filter((x) => x !== t);
+});
+
+const COMPONENT_FIELDS = ['name', 'label', 'description', 'driver', 'kind', 'metric', 'unit', 'range', 'min_start', 'type'];
+function checkComponent(c, id) {
+  uniqueName(db.component_models, c.name, id, 'linh kiện');
+  if (!/^[a-z0-9-]+$/.test(c.name)) throw new ApiError("Mã chỉ gồm chữ thường, số và dấu '-'", 'validation', { fields: { name: 'Không hợp lệ' } });
+  if (!/^[a-z0-9_]+$/.test(c.driver ?? '')) throw new ApiError("Driver chỉ gồm chữ thường, số và dấu '_'", 'validation', { fields: { driver: 'Không hợp lệ' } });
+  if (!c.metric || !c.unit) throw new ApiError('Nhập metric và đơn vị', 'validation');
+  if (!(Number(c.range?.min) < Number(c.range?.max))) throw new ApiError('Giá trị nhỏ nhất phải nhỏ hơn lớn nhất', 'validation');
+}
+export const createComponentModel = (body) => catalogWrite(() => {
+  const c = { _id: oid(), min_start: null, type: null, description: '' };
+  COMPONENT_FIELDS.forEach((k) => body[k] !== undefined && (c[k] = body[k]));
+  checkComponent(c, null);
+  db.component_models.push(c);
+  return c;
+});
+export const updateComponentModel = (id, body) => catalogWrite(() => {
+  const c = must(byId(db.component_models, id), 'loại linh kiện');
+  const next = { ...c };
+  COMPONENT_FIELDS.forEach((k) => body[k] !== undefined && (next[k] = body[k]));
+  checkComponent(next, id);
+  Object.assign(c, next);
+  return c;
+});
+export const deleteComponentModel = (id) => catalogWrite(() => {
+  must(byId(db.component_models, id), 'loại linh kiện');
+  const used = db.device_models.filter((m) => m.components.includes(id)).length;
+  if (used) throw new ApiError(`Linh kiện đang được dùng bởi ${used} mẫu thiết bị`, 'conflict');
+  db.component_models = db.component_models.filter((x) => x._id !== id);
+});
+
+function checkDeviceModel(m, id) {
+  uniqueName(db.device_models, m.name, id, 'mẫu thiết bị');
+  must(byId(db.types, m.type_id), 'loại thiết bị');
+  if (!m.components?.length) throw new ApiError('Mẫu cần ít nhất một linh kiện', 'validation');
+  if (new Set(m.components).size !== m.components.length) throw new ApiError('Mẫu không được có 2 linh kiện cùng loại', 'validation');
+  m.components.forEach((cid) => must(byId(db.component_models, cid), 'loại linh kiện'));
+  if (m.buttons && !m.components.some((cid) => byId(db.component_models, cid)?.name === m.buttons && byId(db.component_models, cid)?.kind === 'actuator')) {
+    throw new ApiError('Nút bấm phải điều khiển một linh kiện chấp hành có trong mẫu', 'validation');
+  }
+}
+export const createDeviceModel = (body) => catalogWrite(() => {
+  const m = { _id: oid(), name: String(body.name ?? '').trim(), description: body.description ?? '', type_id: body.type_id, url_img: null, buttons: body.buttons || null, components: body.components ?? [], created_at: iso() };
+  checkDeviceModel(m, null);
+  db.device_models.push(m);
+  return m;
+});
+export const updateDeviceModel = (id, body) => catalogWrite(() => {
+  const m = must(byId(db.device_models, id), 'mẫu thiết bị');
+  const next = { ...m };
+  ['name', 'description', 'type_id', 'buttons', 'components'].forEach((k) => body[k] !== undefined && (next[k] = k === 'buttons' ? body[k] || null : body[k]));
+  checkDeviceModel(next, id);
+  Object.assign(m, next);
+  return m;
+});
+export const deleteDeviceModel = (id) => catalogWrite(() => {
+  must(byId(db.device_models, id), 'mẫu thiết bị');
+  const used = db.devices.filter((d) => d.device_model_id === id).length;
+  if (used) throw new ApiError(`Mẫu đang được dùng bởi ${used} thiết bị`, 'conflict');
+  db.device_models = db.device_models.filter((x) => x._id !== id);
+});
+
 export const exportDeviceModel = (id) => respond(() => {
   const user = requireUser();
   requireRole(user, ['admin', 'developer']);
@@ -1309,6 +1408,22 @@ export function unregisterDevice(id) {
     const ids = new Set(compsOf(d).map((c) => c._id));
     db.threshold_rules.forEach((r) => (ids.has(r.component_id) || ids.has(r.auto_action?.component_id)) && (r.enabled = false));
     db.schedules.forEach((s) => ids.has(s.component_id) && (s.enabled = false));
+    return { ok: true };
+  });
+}
+
+// Xóa hẳn thiết bị khỏi kho (admin, developer)
+export function deleteDevice(id) {
+  return respond(() => {
+    const u = requireUser();
+    requireRole(u, ['admin', 'developer']);
+    const d = must(byId(db.devices, id), 'thiết bị');
+    const ids = new Set(compsOf(d).map((c) => c._id));
+    db.threshold_rules = db.threshold_rules.filter((r) => !ids.has(r.component_id) && !ids.has(r.auto_action?.component_id));
+    db.schedules = db.schedules.filter((s) => !ids.has(s.component_id));
+    db.components = db.components.filter((c) => c.device_id !== id);
+    db.devices = db.devices.filter((x) => x._id !== id);
+    writeAudit({ action: 'device.deleted', userId: u._id, username: u.username, details: `Xóa thiết bị ${d.device_name}` });
     return { ok: true };
   });
 }

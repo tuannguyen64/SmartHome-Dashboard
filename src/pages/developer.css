@@ -9,7 +9,7 @@
 .developer-summary-card span { color: var(--muted); font-size: 14px; }
 .developer-summary-card strong { color: var(--text); font-size: 24px; }
 .developer-catalog { padding: 20px; }
-.developer-catalog-head { align-items: center; flex-wrap: wrap; }
+.developer-catalog-head { align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .developer-filters { display: flex; align-items: flex-end; gap: 14px; margin: 18px 0; }
 .developer-filters .field { flex: 1 1 240px; max-width: 420px; }
 .developer-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -30,7 +30,7 @@
 .developer-chips span { padding: 5px 8px; border: 1px solid #e0e7ff; border-radius: 999px; background: #f5f7ff; color: #3730a3; font-size: 11px; }
 .developer-item-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
 .developer-mono { color: var(--muted); font-family: var(--font-mono, monospace); font-size: 11px; overflow-wrap: anywhere; }
-.developer-properties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 18px 0 0; }
+.developer-properties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 18px 0 16px; }
 .developer-properties div { min-width: 0; }
 .developer-properties dt { color: var(--muted); font-size: 11px; }
 .developer-properties dd { margin: 4px 0 0; color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
@@ -89,4 +89,20 @@
   .developer-summary { grid-template-columns: minmax(0, 1fr); }
   .developer-summary-card { flex-direction: row; align-items: center; }
   .developer-item-foot { align-items: flex-start; flex-direction: column; }
+}
+
+/* Danh mục: thao tác thêm / sửa / xóa */
+.developer-item-actions { gap: 6px; }
+.developer-danger { color: #dc2626; }
+.developer-danger:hover { background: #fef2f2; }
+.developer-item > .developer-mono:last-of-type { margin-bottom: 4px; }
+.developer-check-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.developer-check-group { margin: 0; padding: 10px 12px 12px; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.developer-check-group legend { padding: 0 6px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.developer-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+.developer-check input { margin-top: 2px; }
+.developer-check small { display: block; color: var(--muted); font-size: 11px; font-family: var(--font-mono, monospace); }
+.developer-row-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: nowrap; }
+@media (max-width: 640px) {
+  .developer-check-groups { grid-template-columns: minmax(0, 1fr); }
 }

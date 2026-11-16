@@ -4,7 +4,7 @@
 // Backend lưu theo thiết bị (device + component_model); web dùng "component" với id `${device_id}:${component_model_id}`.
 // File này chuyển đổi hai chiều: hẹn giờ (/devices/:id/schedules), lệnh (/devices/:id/commands),
 // ngưỡng cảnh báo (/alert-rules) và cảnh báo (/alerts).
-// Backend CHƯA CÓ: /admin/overview, /admin/logs, /admin/settings (các trang này báo lỗi khi chạy backend thật).
+// Danh mục (/types, /component-models, /device-models) và /devices dùng thẳng API backend (admin, developer).
 
 import { getToken } from './session.js';
 import { ApiError } from './errors.js';
@@ -75,6 +75,16 @@ export const listTypes = () => get('/types');
 export const listComponentModels = () => get('/component-models');
 export const listDeviceModels = () => get('/device-models');
 export const exportDeviceModel = (id) => get(`/device-models/${id}/export`);
+export const createType = (b) => post('/types', b);
+export const updateType = (id, b) => patch(`/types/${id}`, b);
+export const deleteType = (id) => del(`/types/${id}`);
+export const createComponentModel = (b) => post('/component-models', b);
+export const updateComponentModel = (id, b) => patch(`/component-models/${id}`, b);
+export const deleteComponentModel = (id) => del(`/component-models/${id}`);
+export const createDeviceModel = (b) => post('/device-models', b);
+export const updateDeviceModel = (id, b) => patch(`/device-models/${id}`, b);
+export const deleteDeviceModel = (id) => del(`/device-models/${id}`);
+export const deleteDevice = (id) => del(`/devices/${id}`);
 
 // ---- vị trí
 export const listPlaces = () => get('/places');

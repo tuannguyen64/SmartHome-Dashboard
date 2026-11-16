@@ -88,8 +88,8 @@ export default function Overview() {
         </div>
       ) : !devices.length ? (
         <div className="card">
-          <Empty title="Bạn chưa có thiết bị nào" action={<Link className="btn btn-primary" to="/thiet-bi">Tạo vị trí và đăng ký thiết bị</Link>}>
-            Tạo nhà, phòng rồi nhập mã đăng ký in trên bo để bắt đầu theo dõi.
+          <Empty title="Bạn chưa có thiết bị nào" action={<Link className="btn btn-primary" to="/thiet-bi">Quản lý vị trí</Link>}>
+            Thiết bị được gán cho tài khoản của bạn sẽ hiện ở đây để theo dõi và điều khiển.
           </Empty>
         </div>
       ) : (

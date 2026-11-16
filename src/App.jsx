@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppLayout from './components/AppLayout.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 import { isStaff } from './utils/constants.js';
@@ -35,6 +35,12 @@ function StaffRedirect() {
   return <Navigate to={user?.role === 'developer' ? '/developer' : '/admin'} replace />;
 }
 
+// Đường dẫn cũ /developer/diagnostics/:id → trang Chi tiết thiết bị
+function DiagnosticsRedirect() {
+  const { deviceId } = useParams();
+  return <Navigate to={`/developer/devices/${deviceId}`} replace />;
+}
+
 function AdminOnly({ children }) {
   const { user } = useAuth();
   if (user?.role === 'admin') return children;
@@ -61,7 +67,9 @@ export default function App() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<AdminOnly><Admin /></AdminOnly>} />
-        <Route path="devices" element={<Admin />} />
+        <Route path="catalog" element={<DeveloperCatalog />} />
+        <Route path="devices" element={<DeveloperDevices />} />
+        <Route path="devices/:deviceId" element={<DeveloperDiagnostics />} />
         <Route path="logs" element={<AdminLogs />} />
         <Route path="settings" element={<AdminOnly><AdminSettings /></AdminOnly>} />
         <Route path="ca-nhan" element={<Profile />} />
@@ -70,8 +78,9 @@ export default function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="catalog" element={<DeveloperCatalog />} />
         <Route path="devices" element={<DeveloperDevices />} />
-        <Route path="diagnostics" element={<DeveloperDiagnostics />} />
-        <Route path="diagnostics/:deviceId" element={<DeveloperDiagnostics />} />
+        <Route path="devices/:deviceId" element={<DeveloperDiagnostics />} />
+        <Route path="diagnostics" element={<Navigate to="/developer/devices" replace />} />
+        <Route path="diagnostics/:deviceId" element={<DiagnosticsRedirect />} />
         <Route path="logs" element={<AdminLogs />} />
         <Route path="ca-nhan" element={<Profile />} />
       </Route>

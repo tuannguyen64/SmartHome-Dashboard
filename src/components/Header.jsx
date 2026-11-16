@@ -12,7 +12,6 @@ const NAV = [
   { to: '/tu-dong', label: 'Tự động' },
   { to: '/canh-bao', label: 'Cảnh báo' },
   { to: '/lich-su', label: 'Lịch sử' },
-  { to: '/thiet-bi', label: 'Thiết bị' },
 ];
 
 export default function Header() {

@@ -21,7 +21,6 @@ export default function PlacesDevices() {
   const [selected, setSelected] = useState('');
   const [placeForm, setPlaceForm] = useState(null); // { mode: 'create'|'edit', parent?, place? }
   const [deviceForm, setDeviceForm] = useState(null);
-  const [register, setRegister] = useState(false);
 
   const owned = (home?.places ?? []).filter((p) => p.owner_id === user._id);
   const children = (id) => owned.filter((p) => p.parent_id === id).sort((a, b) => a.order - b.order);
@@ -97,11 +96,8 @@ export default function PlacesDevices() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Vị trí và thiết bị</h1>
-          <p className="page-sub">Tạo nhà, tầng, phòng; đăng ký thiết bị bằng mã in trên bo</p>
+          <p className="page-sub">Tạo nhà, tầng, phòng và sắp xếp thiết bị vào từng vị trí</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setRegister(true)} disabled={!places.length}>
-          <Icon name="plus" size={17} /> Đăng ký thiết bị
-        </button>
       </div>
 
       <div className="split" style={{ '--split-cols': 'minmax(0, 360px) minmax(0, 1fr)' }}>
@@ -136,9 +132,7 @@ export default function PlacesDevices() {
           {loading && !home ? (
             <Skeleton height={260} />
           ) : !devices.length ? (
-            <Empty title="Chưa có thiết bị" action={places.length > 0 && <button className="btn btn-primary btn-sm" onClick={() => setRegister(true)}>Đăng ký thiết bị</button>}>
-              Nhập mã đăng ký in trên bo để nhận thiết bị.
-            </Empty>
+            <Empty title="Chưa có thiết bị">Thiết bị được gán cho tài khoản của bạn sẽ hiện ở đây.</Empty>
           ) : (
             <div className="table-wrap">
               <table className="table">
@@ -199,7 +193,6 @@ export default function PlacesDevices() {
 
       {placeForm && <PlaceForm {...placeForm} places={places} paths={home.paths} onClose={() => setPlaceForm(null)} onDone={() => { setPlaceForm(null); reload({ silent: true }); }} />}
       {deviceForm && <DeviceForm device={deviceForm} places={places} paths={home.paths} onClose={() => setDeviceForm(null)} onDone={() => { setDeviceForm(null); reload({ silent: true }); }} />}
-      {register && <RegisterForm places={places} paths={home.paths} defaultPlace={selected} onClose={() => setRegister(false)} onDone={() => { setRegister(false); reload({ silent: true }); }} />}
       {dialog}
     </div>
   );
@@ -288,61 +281,6 @@ function DeviceForm({ device, places, paths, onClose, onDone }) {
         <div className="modal-foot" style={{ marginTop: 6 }}>
           <button type="button" className="btn btn-soft" onClick={onClose}>Hủy</button>
           <button className="btn btn-primary">Lưu</button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function RegisterForm({ places, paths, defaultPlace, onClose, onDone }) {
-  const toast = useToast();
-  const act = useAction();
-  const [f, setF] = useState({ registration_code: '', place_id: defaultPlace || places.find((p) => p.type === 'room')?._id || places[0]?._id || '', device_name: '' });
-  const [fields, setFields] = useState({});
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const submit = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    setFields({});
-    setError(null);
-    try {
-      const d = await act(() => api.registerDevice({ ...f, device_name: f.device_name || undefined }));
-      toast.success(`"${d.device_name}" đã thuộc về bạn.`, 'Đăng ký thành công');
-      onDone();
-    } catch (err) {
-      setFields(err.details?.fields ?? {});
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Modal title="Đăng ký thiết bị" onClose={onClose} width={500}>
-      <form className="stack" onSubmit={submit}>
-        <Field label="Mã đăng ký" hint="8 ký tự in trên bo, không phân biệt hoa/thường" error={fields.registration_code}>
-          <input
-            className="input mono"
-            value={f.registration_code}
-            maxLength={9}
-            placeholder="ABCD2345"
-            style={{ letterSpacing: '.15em', fontWeight: 600 }}
-            onChange={(e) => setF({ ...f, registration_code: e.target.value.toUpperCase() })}
-            autoFocus
-          />
-        </Field>
-        <Field label="Đặt vào vị trí">
-          <select className="select" value={f.place_id} onChange={(e) => setF({ ...f, place_id: e.target.value })}>
-            {places.map((p) => <option key={p._id} value={p._id}>{paths.get(p._id)}</option>)}
-          </select>
-        </Field>
-        <Field label="Tên thiết bị (tùy chọn)" hint="Bỏ trống để dùng tên mặc định">
-          <input className="input" value={f.device_name} onChange={(e) => setF({ ...f, device_name: e.target.value })} />
-        </Field>
-        {error && <div className="alert-box alert-box-red">{error}</div>}
-        <div className="modal-foot" style={{ marginTop: 6 }}>
-          <button type="button" className="btn btn-soft" onClick={onClose}>Hủy</button>
-          <button className="btn btn-primary" disabled={busy || !f.registration_code}>Đăng ký</button>
         </div>
       </form>
     </Modal>

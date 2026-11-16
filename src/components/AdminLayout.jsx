@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { RealtimeProvider, useRealtimeStatus } from '../context/RealtimeContext.jsx';
 import { isStaff, ROLES } from '../utils/constants.js';
@@ -11,7 +10,8 @@ import { Spinner } from './ui.jsx';
 const ADMIN_NAV = (base) => [
   { to: base, label: 'Tổng quan Admin', end: true },
   { to: `${base}/users`, label: 'Quản lý User', role: 'admin' },
-  { to: `${base}/devices`, label: 'Thiết bị & Bo mạch' },
+  { to: `${base}/catalog`, label: 'Danh mục' },
+  { to: `${base}/devices`, label: 'Thiết bị' },
   { to: `${base}/logs`, label: 'Nhật ký Hệ thống' },
   { to: `${base}/settings`, label: 'Cấu hình Cảnh báo & Server', role: 'admin' },
 ];
@@ -20,32 +20,21 @@ function AdminShell({ base, isDeveloper }) {
   const { user, logout } = useAuth();
   const { connected } = useRealtimeStatus();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const accountRef = useRef(null);
   const name = user?.full_name || user?.username || 'Quản trị viên';
   const initial = name.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || 'A';
   const nav = isDeveloper
     ? [
       { to: base, label: 'Tổng quan Developer', end: true },
       { to: `${base}/catalog`, label: 'Danh mục phần cứng' },
-      { to: `${base}/devices`, label: 'Triển khai thiết bị' },
-      { to: `${base}/diagnostics`, label: 'Chẩn đoán' },
+      { to: `${base}/devices`, label: 'Thiết bị' },
       { to: `${base}/logs`, label: 'Nhật ký Hệ thống' },
     ]
     : ADMIN_NAV(base).filter((item) => !item.role || item.role === user?.role);
 
-  useEffect(() => {
-    setAccountMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const closeOnOutsideClick = (event) => {
-      if (accountRef.current && !accountRef.current.contains(event.target)) setAccountMenuOpen(false);
-    };
-    document.addEventListener('mousedown', closeOnOutsideClick);
-    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
-  }, []);
+  const signOut = async () => {
+    await logout();
+    navigate('/dang-nhap');
+  };
 
   return (
     <>
@@ -70,51 +59,17 @@ function AdminShell({ base, isDeveloper }) {
             <NavLink to={`${base}/logs`} className="admin-bell" aria-label="Mở nhật ký hệ thống">
               <FigmaIcon name="bell" size={36} />
             </NavLink>
-            <div className="admin-account" ref={accountRef}>
-              <button
-                className="admin-account-button"
-                type="button"
-                onClick={() => setAccountMenuOpen((open) => !open)}
-                aria-expanded={accountMenuOpen}
-                aria-haspopup="menu"
-                aria-label="Mở menu tài khoản"
-              >
-                <span className="hdr-user-text">
-                  <strong>{name.split(' ').pop()}</strong>
-                  <span>{ROLES[user?.role]?.label ?? 'Quản trị viên'}</span>
-                </span>
-                <span className="avatar">{initial}</span>
-                <Icon name="chevronDown" size={15} />
-              </button>
-              {accountMenuOpen && (
-                <div className="admin-account-menu" role="menu">
-                  <div className="admin-account-summary">
-                    <strong>{name}</strong>
-                    <span>@{user?.username}</span>
-                  </div>
-                  <Link to={`${base}/ca-nhan`} role="menuitem">
-                    <Icon name="user" size={16} /> Thông tin cá nhân
-                  </Link>
-                  {!isDeveloper && (
-                    <Link to={`${base}/logs`} role="menuitem">
-                      <Icon name="clock" size={16} /> Nhật ký hệ thống
-                    </Link>
-                  )}
-                  <button
-                    className="danger"
-                    role="menuitem"
-                    type="button"
-                    onClick={async () => {
-                      setAccountMenuOpen(false);
-                      await logout();
-                      navigate('/dang-nhap');
-                    }}
-                  >
-                    <Icon name="logout" size={16} /> Đăng xuất
-                  </button>
-                </div>
-              )}
-            </div>
+            <NavLink to={`${base}/ca-nhan`} className="admin-account-button admin-profile-link" title="Thông tin cá nhân">
+              <span className="hdr-user-text">
+                <strong>{name.split(' ').pop()}</strong>
+                <span>{ROLES[user?.role]?.label ?? 'Quản trị viên'}</span>
+              </span>
+              <span className="avatar">{initial}</span>
+            </NavLink>
+            <button className="admin-logout" type="button" onClick={signOut} title="Đăng xuất">
+              <Icon name="logout" size={17} />
+              <span>Đăng xuất</span>
+            </button>
           </div>
         </div>
       </header>
