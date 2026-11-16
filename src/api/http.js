@@ -1,10 +1,10 @@
-// Gọi backend Express thật của nhóm (cùng API mà FrontEnd-SmartHome đang dùng).
-// Vite chuyển tiếp /api tới VITE_API_TARGET (mặc định http://localhost:5000) – xem vite.config.js.
+// Gọi backend Express thật của nhóm (my-express-app). Vite chuyển tiếp /api tới VITE_API_TARGET
+// (mặc định http://localhost:5000) – xem vite.config.js.
 //
-// ĐÃ CÓ ở backend nhóm: /auth, /users, /types, /component-models, /device-models, /places, /devices/...
-// CHƯA CÓ (cần nhóm backend bổ sung theo database-design.md): /components, /commands,
-//   /threshold-rules, /schedules, /alerts, /admin/overview, /admin/logs, /admin/settings, PATCH /users/me.
-// Các trang dùng chúng sẽ báo lỗi cho tới khi backend hỗ trợ.
+// Backend lưu theo thiết bị (device + component_model); web dùng "component" với id `${device_id}:${component_model_id}`.
+// File này chuyển đổi hai chiều: hẹn giờ (/devices/:id/schedules), lệnh (/devices/:id/commands),
+// ngưỡng cảnh báo (/alert-rules) và cảnh báo (/alerts).
+// Backend CHƯA CÓ: /admin/overview, /admin/logs, /admin/settings (các trang này báo lỗi khi chạy backend thật).
 
 import { getToken } from './session.js';
 import { ApiError } from './errors.js';
@@ -175,17 +175,81 @@ export async function listCommands(q = {}) {
   return { items: all.slice((page - 1) * limit, page * limit), total: all.length, page, limit };
 }
 
-// ---- threshold_rules / schedules / alerts (theo database-design.md, backend cần bổ sung)
-// Backend chưa có → báo rõ thay vì "Lỗi 404"
-const NOT_YET = 'Backend hiện chưa có chức năng này (threshold_rules / schedules / alerts – xem HUONG-DAN-TRIEN-KHAI.md mục 7.9). Chạy chế độ giả lập để xem thử.';
-const soon = (p) =>
-  p.catch((e) => {
-    throw e.code === 'not_found' ? new ApiError(NOT_YET, 'unsupported') : e;
-  });
+// ---- ngưỡng cảnh báo: backend /alert-rules lưu device_id + sensor_model_id, web dùng component_id
+const toStep = (st) => (st ? (st.mode === 'on' ? { mode: 'on', value: st.val } : { mode: 'off' }) : null);
+const fromStep = (st) => (st ? { mode: st.mode === 'on' ? 'on' : 'off', ...(st.mode === 'on' && typeof st.value === 'number' ? { val: st.value } : {}) } : null);
 
-export const listRules = () => soon(get('/threshold-rules'));
-export const saveRule = (r) => (r._id ? patch(`/threshold-rules/${r._id}`, r) : post('/threshold-rules', r)).then((x) => (x?.rule ? x : { rule: x, warning: null }));
-export const deleteRule = (id) => del(`/threshold-rules/${id}`);
+function toRule(r) {
+  const aa = r.auto_action;
+  return {
+    ...r,
+    component_id: componentKey(r.device_id, r.sensor_model_id),
+    auto_action: aa
+      ? { enabled: aa.enabled, component_id: componentKey(aa.device_id, aa.component_model_id), on_breach: toStep(aa.on_breach), on_resolve: toStep(aa.on_resolve) }
+      : null,
+    state: { breach_count: r.state?.breach_count ?? 0, auto_active: !!r.state?.auto_active },
+  };
+}
+
+function ruleBody(input) {
+  const fields = {};
+  let sensor = null;
+  try {
+    sensor = splitComponentKey(input.component_id);
+  } catch {
+    fields.component_id = 'Chọn cảm biến';
+  }
+  let auto_action = null;
+  const aa = input.auto_action;
+  if (aa) {
+    try {
+      const t = splitComponentKey(aa.component_id);
+      auto_action = { enabled: aa.enabled !== false, device_id: t.deviceId, component_model_id: t.componentModelId, on_breach: fromStep(aa.on_breach), on_resolve: fromStep(aa.on_resolve) };
+    } catch {
+      fields.target = 'Chọn thiết bị chấp hành';
+    }
+  }
+  if (Object.keys(fields).length) throw new ApiError('Quy tắc chưa hợp lệ', 'validation', { fields });
+  return {
+    name: input.name,
+    device_id: sensor.deviceId,
+    sensor_model_id: sensor.componentModelId,
+    min: input.min,
+    max: input.max,
+    severity: input.severity,
+    channels: input.channels,
+    enabled: input.enabled !== false,
+    auto_action,
+  };
+}
+
+export const listRules = async () => (await get('/alert-rules')).map(toRule);
+export async function saveRule(input) {
+  const body = ruleBody(input);
+  const r = input._id ? await patch(`/alert-rules/${input._id}`, body) : await post('/alert-rules', body);
+  return { rule: toRule(r), warning: null };
+}
+export const deleteRule = (id) => del(`/alert-rules/${id}`);
+
+// ---- cảnh báo
+const toAlert = (a) => (a ? { ...a, component_id: a.device_id && a.sensor_model_id ? componentKey(a.device_id, a.sensor_model_id) : null } : a);
+export const listAlerts = async (q) => {
+  const r = await get('/alerts', q);
+  return { ...r, items: r.items.map(toAlert) };
+};
+export const alertSummary = async () => {
+  const r = await get('/alerts/summary');
+  return { ...r, recent: r.recent.map(toAlert) };
+};
+export const getAlert = async (id) => toAlert(await get(`/alerts/${id}`));
+export const acknowledgeAlert = async (id) => {
+  try {
+    return toAlert(await post(`/alerts/${id}/ack`));
+  } catch (e) {
+    if (e.details?.alert) e.details.alert = toAlert(e.details.alert);
+    throw e;
+  }
+};
 
 // ---- hẹn giờ: backend lưu theo thiết bị (/devices/:id/schedules, time "HH:mm" + days[]),
 // web dùng cron "m h * * d" và component_id → chuyển đổi hai chiều ở đây.
@@ -253,10 +317,7 @@ const deviceOfSchedule = (id) => {
 export const setScheduleEnabled = async (id, enabled) => toSchedule(await patch(`/devices/${deviceOfSchedule(id)}/schedules/${id}`, { enabled }));
 export const deleteSchedule = (id) => del(`/devices/${deviceOfSchedule(id)}/schedules/${id}`);
 
-export const listAlerts = (q) => soon(get('/alerts', q));
-export const alertSummary = () => get('/alerts/summary');
-export const getAlert = (id) => get(`/alerts/${id}`);
-export const acknowledgeAlert = (id) => post(`/alerts/${id}/ack`);
+
 
 // ---- thời gian thực: backend hiện chưa có WebSocket → các trang tự làm mới định kỳ
 export const subscribe = () => () => {};
