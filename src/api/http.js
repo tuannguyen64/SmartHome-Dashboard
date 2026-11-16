@@ -88,6 +88,10 @@ export const deleteDevice = (id) => del(`/devices/${id}`);
 // Nhân viên (admin, developer): chủ sở hữu + quy tắc của thiết bị, lịch sử lệnh toàn hệ thống
 export const deviceOwnerInfo = (id) => get(`/devices/${id}/owner-info`);
 export const listStaffCommands = (q) => get('/admin/commands', q);
+// Lắp đặt tại nhà khách (kỹ thuật viên, admin)
+export const listCustomers = (q) => get('/admin/customers', q);
+export const customerPlaces = (id) => get(`/admin/customers/${id}/places`);
+export const installDevice = (b) => post('/devices/install', b);
 
 // ---- vị trí
 export const listPlaces = () => get('/places');

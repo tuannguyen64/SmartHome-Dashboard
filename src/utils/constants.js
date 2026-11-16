@@ -28,7 +28,7 @@ export const metricInfo = (metric) => METRICS[metric] ?? FALLBACK_METRIC;
 
 export const ROLES = {
   admin: { label: 'Quản trị viên', tone: 'red' },
-  developer: { label: 'Developer', tone: 'blue' },
+  developer: { label: 'Kỹ thuật viên', tone: 'blue' },
   user: { label: 'Người dùng', tone: 'green' },
 };
 export const isStaff = (u) => u?.role === 'admin' || u?.role === 'developer';

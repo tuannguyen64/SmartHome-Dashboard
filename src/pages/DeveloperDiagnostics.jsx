@@ -118,7 +118,7 @@ function AutomationCard({ info }) {
 }
 
 // Chi tiết một thiết bị (admin + developer): kết nối, dữ liệu mới nhất, linh kiện, lệnh gần đây
-function DeviceDetail({ deviceId, base }) {
+function DeviceDetail({ deviceId, base, isAdmin }) {
   const navigate = useNavigate();
   const toast = useToast();
   const act = useAction();
@@ -167,6 +167,24 @@ function DeviceDetail({ deviceId, base }) {
     }
   };
 
+  const release = async () => {
+    const name = device.data?.device_name ?? 'thiết bị';
+    const owner = info.data?.owner?.full_name;
+    if (!(await confirm({
+      title: 'Thu hồi thiết bị?',
+      message: `Gỡ "${name}" khỏi tài khoản${owner ? ` của ${owner}` : ''} và đưa về kho. Quy tắc, lịch hẹn và quyền chia sẻ của thiết bị sẽ bị xóa; mã đăng ký giữ nguyên để lắp lại.`,
+      confirmText: 'Thu hồi',
+      danger: true,
+    }))) return;
+    try {
+      await act(() => api.unregisterDevice(deviceId));
+      toast.success(`Đã thu hồi "${name}" về kho.`);
+      refresh();
+    } catch (error) {
+      toast.error(error.message || 'Không thu hồi được thiết bị.');
+    }
+  };
+
   if (device.loading && !device.data) {
     return <div className="page developer-page"><Skeleton height={190} /><Skeleton height={280} style={{ marginTop: 16 }} /></div>;
   }
@@ -198,9 +216,16 @@ function DeviceDetail({ deviceId, base }) {
           <button className="btn btn-outline" type="button" disabled={!device.data} onClick={() => setRenaming(device.data.device_name)}>
             <Icon name="pencil" size={16} /> Đổi tên
           </button>
-          <button className="btn btn-danger" type="button" disabled={!device.data} onClick={remove}>
-            <Icon name="trash" size={16} /> Xóa thiết bị
-          </button>
+          {device.data?.owner_id && (
+            <button className={isAdmin ? 'btn btn-outline' : 'btn btn-danger'} type="button" onClick={release}>
+              <Icon name="logout" size={16} /> Thu hồi
+            </button>
+          )}
+          {isAdmin && (
+            <button className="btn btn-danger" type="button" disabled={!device.data} onClick={remove}>
+              <Icon name="trash" size={16} /> Xóa thiết bị
+            </button>
+          )}
         </div>
       </div>
 
@@ -218,6 +243,7 @@ function DeviceDetail({ deviceId, base }) {
           <div><dt>Vị trí</dt><dd>{info.data?.place_path ?? (device.data?.owner_id ? 'Chưa xếp vị trí' : 'Chưa đăng ký')}</dd></div>
           <div><dt>Tin cuối</dt><dd>{status.data?.last_seen ? fmtDateTime(status.data.last_seen) : 'Chưa nhận dữ liệu'}</dd></div>
           <div><dt>Thời gian offline</dt><dd>{status.data?.seconds_since_last_seen == null ? '—' : `${status.data.seconds_since_last_seen} giây`}</dd></div>
+          <div><dt>Lắp đặt</dt><dd>{info.data?.installed ? `${info.data.installed.by}${info.data.installed.at ? ` · ${fmtDateTime(info.data.installed.at)}` : ''}` : device.data?.owner_id ? 'Không rõ (đăng ký trước đây)' : 'Còn trong kho'}</dd></div>
           <div><dt>Ngưỡng offline</dt><dd>{status.data?.offline_after_seconds == null ? '—' : `${status.data.offline_after_seconds} giây`}</dd></div>
         </dl>
       </section>
@@ -269,5 +295,5 @@ export default function DeveloperDiagnostics() {
   const { deviceId } = useParams();
   const { user } = useAuth();
   const base = user?.role === 'developer' ? '/developer' : '/admin';
-  return deviceId ? <DeviceDetail deviceId={deviceId} base={base} /> : <Navigate to={`${base}/devices`} replace />;
+  return deviceId ? <DeviceDetail deviceId={deviceId} base={base} isAdmin={user?.role === 'admin'} /> : <Navigate to={`${base}/devices`} replace />;
 }

@@ -21,6 +21,7 @@ import DeveloperDiagnostics from './pages/DeveloperDiagnostics.jsx';
 import AdminDevicesHub from './pages/AdminDevicesHub.jsx';
 import StaffCommands from './pages/StaffCommands.jsx';
 import Profile from './pages/Profile.jsx';
+import Install from './pages/Install.jsx';
 
 function StaffOnly({ children }) {
   const { user } = useAuth();
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="diagnostics" element={<Navigate to="/developer/devices" replace />} />
         <Route path="diagnostics/:deviceId" element={<DiagnosticsRedirect />} />
         <Route path="commands" element={<StaffCommands />} />
+        <Route path="lap-dat" element={<Install />} />
         <Route path="logs" element={<Navigate to="/developer/commands" replace />} />
         <Route path="ca-nhan" element={<Profile />} />
       </Route>

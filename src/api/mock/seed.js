@@ -3,12 +3,12 @@
 // places, threshold_rules, schedules, alerts, commands.
 //
 // Tài khoản demo (mọi tài khoản dùng chung mật khẩu 123456):
-//   admin – Quản trị viên | dev – Developer
+//   admin – Quản trị viên | dev – Kỹ thuật viên (role developer)
 //   tuan  – Người dùng, chủ nhà, có sẵn thiết bị
 
 import { syntheticValue } from './synthetic.js';
 
-export const SEED_VERSION = 14;
+export const SEED_VERSION = 15;
 export const DEMO_PASSWORD = '123456';
 
 // Băm giả cho chế độ demo. Backend thật dùng bcrypt (NFR4).
@@ -115,6 +115,8 @@ export function createSeed(now = Date.now()) {
       last_seen: null,
       mode: 'custom',
       offline_alert_id: null,
+      installed_by: o.owner_id ? dev._id : null,
+      installed_at: o.registered_at ?? null,
       created_at: at(15 * D),
       ...o,
     };

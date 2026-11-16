@@ -120,3 +120,23 @@
 @media (max-width: 900px) {
   .developer-detail-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------------------------------------------------------------- Lắp đặt tại nhà khách */
+.install-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.install-customer-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; }
+.install-customer-list button {
+  width: 100%; text-align: left; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px;
+  border: 1px solid var(--border, #e3e8f0); border-radius: 10px; background: var(--surface, #fff); color: inherit; cursor: pointer; font: inherit;
+}
+.install-customer-list button:hover:not(:disabled) { border-color: var(--primary, #2460f5); }
+.install-customer-list button.active { border-color: var(--primary, #2460f5); box-shadow: 0 0 0 2px rgba(36, 96, 245, .15); }
+.install-customer-list button:disabled { opacity: .6; cursor: not-allowed; }
+.install-customer-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.install-form { display: flex; flex-direction: column; gap: 12px; }
+.install-form .btn { align-self: flex-start; }
+.install-selected { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border: 1px dashed var(--border, #e3e8f0); border-radius: 10px; min-height: 42px; justify-content: center; }
+.install-code { text-transform: uppercase; letter-spacing: .08em; font-family: ui-monospace, monospace; }
+.install-done { margin-top: 18px; border-top: 1px solid var(--border, #e3e8f0); padding-top: 12px; }
+.install-done h3 { font-size: 14px; margin: 0 0 8px; }
+.install-done ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+@media (max-width: 860px) { .install-grid { grid-template-columns: 1fr; } }

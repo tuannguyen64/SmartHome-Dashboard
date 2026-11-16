@@ -161,7 +161,7 @@ export default function DeveloperDevices({ embedded = false }) {
                     <tr key={device._id}>
                       <td><strong>{device.device_name}</strong><span className="admin-log-id">ID {device._id.slice(-8)}</span></td>
                       <td>{device.model_name ?? modelById.get(device.device_model_id)?.name ?? '—'}<span className="admin-log-id">{device.type_name ?? 'Chưa phân loại'}</span></td>
-                      <td>{device.owner_id ? <><strong>{device.owner_name ?? 'Người dùng'}</strong>{device.owner_username && <span className="admin-log-id">@{device.owner_username}</span>}</> : <span className="muted">Chưa đăng ký</span>}</td>
+                      <td>{device.owner_id ? <><strong>{device.owner_name ?? 'Người dùng'}</strong>{device.owner_username && <span className="admin-log-id">@{device.owner_username}</span>}{user?.role === 'admin' && device.installed_by_name && <span className="admin-log-id">Lắp bởi {device.installed_by_name}</span>}</> : <span className="muted">Chưa đăng ký</span>}</td>
                       <td>{device.place_path ?? '—'}</td>
                       <td>{!device.owner_id ? <Badge tone="gray">Chưa đăng ký</Badge> : device.online ? <Badge tone="green" dot>Online</Badge> : <Badge tone="red" dot>Offline</Badge>}</td>
                       <td>{device.registration_code ? <code className="code-chip">{device.registration_code}</code> : '—'}</td>

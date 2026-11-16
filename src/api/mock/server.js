@@ -144,7 +144,8 @@ function requireUser() {
 const requireRole = (u, roles) => {
   if (!roles.includes(u.role)) throw new ApiError('Bạn không có quyền thực hiện thao tác này', 'forbidden');
 };
-const canSee = (u, d) => isStaff(u) || d.owner_id === u._id || d.shared_with.includes(u._id);
+const techCanSee = (u, d) => u.role !== 'developer' || !d.owner_id || d.installed_by === u._id;
+const canSee = (u, d) => (isStaff(u) ? techCanSee(u, d) : d.owner_id === u._id || d.shared_with.includes(u._id));
 const canSeeComp = (u, cid) => {
   const c = byId(db.components, cid);
   const d = c && deviceOf(c);
@@ -987,7 +988,8 @@ export function myDevices() {
 
 export function listDevices({ search = '', registered = '', status = '', type_id, place_id, page: p = 1, limit = 10 } = {}) {
   return respond(() => {
-    requireRole(requireUser(), ['admin', 'developer']);
+    const actor = requireUser();
+    requireRole(actor, ['admin', 'developer']);
     const s = search.toLowerCase();
     const paths = placePaths(db.places);
     const userById = new Map(db.users.map((user) => [user._id, user]));
@@ -995,7 +997,7 @@ export function listDevices({ search = '', registered = '', status = '', type_id
     const modelsById = new Map(db.device_models.map((model) => [model._id, model]));
     const typesById = new Map(db.types.map((type) => [type._id, type]));
     const list = db.devices.filter((device) =>
-      (!s || `${device.device_name} ${userById.get(device.owner_id)?.full_name ?? ''} ${userById.get(device.owner_id)?.username ?? ''} ${userById.get(device.owner_id)?.email ?? ''} ${device._id}`.toLowerCase().includes(s))
+      techCanSee(actor, device) && (!s || `${device.device_name} ${userById.get(device.owner_id)?.full_name ?? ''} ${userById.get(device.owner_id)?.username ?? ''} ${userById.get(device.owner_id)?.email ?? ''} ${device._id}`.toLowerCase().includes(s))
       && (registered === '' || (registered === 'true') === !!device.owner_id)
       && (!status || (status === 'unregistered' ? !device.owner_id : !!device.owner_id && (status === 'online') === isOnline(device)))
       && (!type_id || device.type_id === type_id)
@@ -1003,6 +1005,7 @@ export function listDevices({ search = '', registered = '', status = '', type_id
     ).map((device) => ({
       ...withOnline(device),
       owner_name: userById.get(device.owner_id)?.full_name ?? null,
+      installed_by_name: device.installed_by ? userById.get(device.installed_by)?.full_name ?? 'Kỹ thuật viên' : null,
       owner_username: userById.get(device.owner_id)?.username ?? null,
       place_path: paths.get(device.place_id) ?? null,
       model_name: modelsById.get(device.device_model_id)?.name ?? null,
@@ -1414,7 +1417,8 @@ export function unregisterDevice(id) {
     const u = requireUser();
     const d = must(byId(db.devices, id), 'thiết bị');
     if (!isStaff(u) && d.owner_id !== u._id) throw new ApiError('Chỉ chủ thiết bị được gỡ', 'forbidden');
-    Object.assign(d, { owner_id: null, place_id: null, shared_with: [], registered_at: null, last_seen: null, mode: 'custom' });
+    if (!techCanSee(u, d)) throw new ApiError('Chỉ thu hồi được thiết bị do bạn lắp đặt', 'forbidden');
+    Object.assign(d, { owner_id: null, place_id: null, shared_with: [], registered_at: null, last_seen: null, mode: 'custom', installed_by: null, installed_at: null });
     const ids = new Set(compsOf(d).map((c) => c._id));
     db.threshold_rules.forEach((r) => (ids.has(r.component_id) || ids.has(r.auto_action?.component_id)) && (r.enabled = false));
     db.schedules.forEach((s) => ids.has(s.component_id) && (s.enabled = false));
@@ -1425,8 +1429,11 @@ export function unregisterDevice(id) {
 // Chủ sở hữu + quy tắc tự động + lịch hẹn của một thiết bị (admin, developer)
 export function deviceOwnerInfo(id) {
   return respond(() => {
-    requireRole(requireUser(), ['admin', 'developer']);
+    const actor = requireUser();
+    requireRole(actor, ['admin', 'developer']);
     const d = must(byId(db.devices, id), 'thiết bị');
+    if (!techCanSee(actor, d)) throw new ApiError('Thiết bị này không do bạn lắp đặt', 'forbidden');
+    const installer = d.installed_by ? byId(db.users, d.installed_by) : null;
     const owner = d.owner_id ? byId(db.users, d.owner_id) : null;
     const compIds = new Set(compsOf(d).map((c) => c._id));
     const compLabel = (cid) => {
@@ -1443,6 +1450,7 @@ export function deviceOwnerInfo(id) {
     return {
       device_id: d._id,
       place_path: path(place),
+      installed: d.installed_by ? { by: installer ? `${installer.full_name} (@${installer.username})` : 'Kỹ thuật viên đã xóa', at: d.installed_at } : null,
       owner: owner ? { _id: owner._id, username: owner.username, full_name: owner.full_name, email: owner.email ?? null, phone: owner.phone ?? null, address: owner.address ?? null, is_active: owner.is_active !== false, deleted: false } : null,
       rules: db.threshold_rules
         .filter((r) => compIds.has(r.component_id) || compIds.has(r.auto_action?.component_id))
@@ -1471,13 +1479,16 @@ export function deviceOwnerInfo(id) {
 // Lịch sử lệnh mọi thiết bị đã tạo (admin, developer)
 export function listStaffCommands({ device_id, source, from, to, search = '', page: p = 1, limit = 20 } = {}) {
   return respond(() => {
-    requireRole(requireUser(), ['admin', 'developer']);
+    const actor = requireUser();
+    requireRole(actor, ['admin', 'developer']);
+    const scoped = (d) => actor.role !== 'developer' || (d && d.installed_by === actor._id);
     const f = from ? new Date(from).getTime() : -Infinity;
     const t = to ? new Date(to).getTime() : Infinity;
     const q = String(search).trim().toLowerCase();
     const userName = (id) => byId(db.users, id);
     const rows = db.commands
       .filter((c) => {
+        if (!scoped(byId(db.devices, c.device_id))) return false;
         if (device_id && c.device_id !== device_id) return false;
         if (source && c.source !== source) return false;
         const at = new Date(c.sent_at).getTime();
@@ -1504,16 +1515,93 @@ export function listStaffCommands({ device_id, source, from, to, search = '', pa
     const pg = Math.max(1, Number(p) || 1);
     return {
       items: rows.slice((pg - 1) * n, pg * n), total: rows.length, page: pg, limit: n,
-      filters: { devices: db.devices.map((d) => ({ id: d._id, name: d.device_name })) },
+      filters: { devices: db.devices.filter(scoped).map((d) => ({ id: d._id, name: d.device_name })) },
     };
   });
+}
+
+// ---------------------------------------------------------------- Lắp đặt (kỹ thuật viên, admin)
+
+export function listCustomers({ search = '' } = {}) {
+  return respond(() => {
+    const actor = requireUser();
+    requireRole(actor, ['admin', 'developer']);
+    const q = String(search).trim().toLowerCase();
+    const items = db.users
+      .filter((u) => u.role === 'user')
+      .filter((u) => (q
+        ? [u.username, u.full_name, u.email, u.phone, u.address].filter(Boolean).some((x) => x.toLowerCase().includes(q))
+        : actor.role !== 'developer' || db.devices.some((d) => d.owner_id === u._id && d.installed_by === actor._id)))
+      .map((u) => ({
+        _id: u._id, username: u.username, full_name: u.full_name, email: u.email ?? null, phone: u.phone ?? null, address: u.address ?? null,
+        is_active: u.is_active !== false,
+        device_count: db.devices.filter((d) => d.owner_id === u._id).length,
+        installed_by_me: db.devices.filter((d) => d.owner_id === u._id && d.installed_by === actor._id).length,
+      }))
+      .sort((x, y) => x.full_name.localeCompare(y.full_name, 'vi'));
+    return { items };
+  });
+}
+
+export function customerPlaces(id) {
+  return respond(() => {
+    requireRole(requireUser(), ['admin', 'developer']);
+    const customer = byId(db.users, id);
+    if (!customer || customer.role !== 'user') throw new ApiError('Không tìm thấy khách hàng', 'not_found');
+    const paths = placePaths(db.places);
+    return db.places
+      .filter((pl) => pl.owner_id === id)
+      .map((pl) => ({ _id: pl._id, name: pl.name, type: pl.type, path: paths.get(pl._id) ?? pl.name }))
+      .sort((x, y) => x.path.localeCompare(y.path, 'vi'));
+  });
+}
+
+export function installDevice({ registration_code, customer_id, place_id, new_room_name, device_name }) {
+  return respond(() => {
+    const actor = requireUser();
+    requireRole(actor, ['admin', 'developer']);
+    const code = String(registration_code ?? '').trim().toUpperCase();
+    const fields = {};
+    if (!code) fields.registration_code = 'Nhập mã in trên bo';
+    if (!customer_id) fields.customer_id = 'Chọn khách hàng';
+    if (!place_id && !String(new_room_name ?? '').trim()) fields.place_id = 'Chọn vị trí hoặc nhập tên phòng mới';
+    if (Object.keys(fields).length) throw new ApiError('Thông tin lắp đặt chưa đủ', 'validation', { fields });
+    const customer = byId(db.users, customer_id);
+    if (!customer || customer.role !== 'user') throw new ApiError('Không tìm thấy khách hàng', 'not_found', { fields: { customer_id: 'Không hợp lệ' } });
+    if (customer.is_active === false) throw new ApiError('Tài khoản khách đang bị khóa', 'validation', { fields: { customer_id: 'Tài khoản bị khóa' } });
+    const d = db.devices.find((x) => x.registration_code === code);
+    if (!d) throw new ApiError('Mã đăng ký không đúng', 'not_found', { fields: { registration_code: 'Không tìm thấy mã này' } });
+    if (d.owner_id) throw new ApiError('Thiết bị đã được lắp cho khách khác', 'conflict', { fields: { registration_code: 'Đã được sử dụng' } });
+    let place;
+    if (place_id) {
+      place = byId(db.places, place_id);
+      if (!place || place.owner_id !== customer._id) throw new ApiError('Vị trí không thuộc khách hàng này', 'validation', { fields: { place_id: 'Không hợp lệ' } });
+    } else {
+      let home = db.places.find((pl) => pl.owner_id === customer._id && pl.type === 'home');
+      if (!home) {
+        home = { _id: oid(), owner_id: customer._id, parent_id: null, name: `Nhà của ${customer.full_name}`, type: 'home', ancestors: [], url_img: null, order: 0 };
+        db.places.push(home);
+      }
+      place = {
+        _id: oid(), owner_id: customer._id, parent_id: home._id, name: String(new_room_name).trim(), type: 'room', ancestors: [home._id], url_img: null,
+        order: db.places.filter((pl) => pl.parent_id === home._id).length,
+      };
+      db.places.push(place);
+    }
+    Object.assign(d, {
+      owner_id: customer._id, place_id: place._id, registered_at: iso(), last_seen: iso(), installed_by: actor._id, installed_at: iso(),
+      device_name: String(device_name ?? '').trim() || d.device_name,
+    });
+    writeAudit({ action: 'device.installed', userId: actor._id, username: actor.username, deviceId: d._id, details: `Lắp "${d.device_name}" cho ${customer.username}` });
+    return { ...withOnline(d), owner_name: customer.full_name, place_path: placePaths(db.places).get(place._id) };
+  }, 300);
 }
 
 // Xóa hẳn thiết bị khỏi kho (admin, developer)
 export function deleteDevice(id) {
   return respond(() => {
     const u = requireUser();
-    requireRole(u, ['admin', 'developer']);
+    requireRole(u, ['admin']);
     const d = must(byId(db.devices, id), 'thiết bị');
     const ids = new Set(compsOf(d).map((c) => c._id));
     db.threshold_rules = db.threshold_rules.filter((r) => !ids.has(r.component_id) && !ids.has(r.auto_action?.component_id));

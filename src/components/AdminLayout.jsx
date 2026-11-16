@@ -22,9 +22,10 @@ function AdminShell({ base, isDeveloper }) {
   const initial = name.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || 'A';
   const nav = isDeveloper
     ? [
-      { to: base, label: 'Tổng quan Developer', end: true },
-      { to: `${base}/catalog`, label: 'Danh mục phần cứng' },
+      { to: base, label: 'Tổng quan', end: true },
+      { to: `${base}/lap-dat`, label: 'Lắp đặt' },
       { to: `${base}/devices`, label: 'Thiết bị' },
+      { to: `${base}/catalog`, label: 'Danh mục phần cứng' },
       { to: `${base}/commands`, label: 'Lịch sử lệnh' },
     ]
     : ADMIN_NAV(base).filter((item) => !item.role || item.role === user?.role);

@@ -232,7 +232,7 @@ function DeveloperWorkspace({ data, filter, setFilter }) {
     <section className="card admin-dev-panel">
       <div className="card-head">
         <div>
-          <h2 className="card-title">Developer dashboard</h2>
+          <h2 className="card-title">Bảng vận hành kỹ thuật</h2>
           <p className="card-sub">Phân nhóm theo hệ thống, thiết bị, cảnh báo và điều khiển</p>
         </div>
       </div>
@@ -270,10 +270,10 @@ export default function AdminDashboard() {
     <div className="page admin-page">
       <div className="page-head">
         <div>
-          <h1 className="page-title">{isDeveloper ? 'Tổng quan Developer' : 'Tổng quan Admin'}</h1>
+          <h1 className="page-title">{isDeveloper ? 'Tổng quan Kỹ thuật viên' : 'Tổng quan Admin'}</h1>
           <p className="page-sub">
             {isDeveloper
-              ? 'Theo dõi trạng thái thiết bị, lỗi điều khiển và số liệu vận hành để hỗ trợ triển khai SmartHome'
+              ? 'Theo dõi trạng thái thiết bị, lỗi điều khiển và số liệu vận hành để hỗ trợ lắp đặt, bảo trì tại nhà khách'
               : 'Giám sát hoạt động và sức khỏe toàn hệ thống SmartHome'}
           </p>
         </div>

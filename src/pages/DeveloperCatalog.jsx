@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useAction, useApi } from '../hooks/useApi.js';
 import { downloadText } from '../utils/format.js';
+import { ROLES } from '../utils/constants.js';
 import './developer.css';
 
 const SECTIONS = [
@@ -95,7 +96,7 @@ export default function DeveloperCatalog({ embedded = false }) {
             <h1 className="page-title">Danh mục phần cứng</h1>
             <p className="page-sub">Quản lý loại thiết bị, linh kiện và mẫu thiết bị dùng để cấp thiết bị mới.</p>
           </div>
-          <Badge tone="blue" dot>{user?.role === 'admin' ? 'Quản trị viên' : 'Developer'}</Badge>
+          <Badge tone="blue" dot>{ROLES[user?.role]?.label ?? 'Nhân viên'}</Badge>
         </div>
       )}
 
