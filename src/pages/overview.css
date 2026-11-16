@@ -10,6 +10,8 @@
 .ov-unit { font-size: 18px; font-weight: 500; color: var(--muted); }
 .ov-nodata { font-size: 20px; line-height: 40px; color: var(--muted); }
 .ov-label { font-size: 15px; line-height: 20px; color: var(--muted); margin-top: 2px; }
+.ov-device { font-size: 13px; line-height: 18px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-device strong { color: var(--text); font-weight: 600; }
 .ov-meta { font-size: 13px; line-height: 19px; color: var(--muted); margin-top: 4px; }
 .ov-alertcard:hover { text-decoration: none; box-shadow: 0 4px 12px rgba(36, 56, 88, 0.08); }
 

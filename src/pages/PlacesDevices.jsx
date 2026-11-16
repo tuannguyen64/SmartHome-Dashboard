@@ -67,9 +67,11 @@ export default function PlacesDevices() {
 
   const Node = ({ p, depth }) => (
     <li>
-      <div className={`tree-node${selected === p._id ? ' active' : ''}`} style={{ paddingLeft: 10 + depth * 18 }}>
+      <div className={`tree-node${selected === p._id ? ' active' : ''}`}>
+        {/* Nhãn loại thẳng hàng ở đầu dòng, chỉ tên thụt vào theo cấp */}
         <button className="name" onClick={() => setSelected(selected === p._id ? '' : p._id)}>
-          {p.name} <Badge tone="blue">{PLACE_TYPES[p.type]}</Badge>
+          <span className="tree-type"><Badge tone="blue">{PLACE_TYPES[p.type]}</Badge></span>
+          <span className="tree-name" style={{ paddingLeft: depth * 18 }}>{p.name}</span>
         </button>
         {CHILD_TYPES[p.type].length > 0 && (
           <button className="icon-btn" title="Thêm vị trí con" onClick={() => setPlaceForm({ mode: 'create', parent: p })}>

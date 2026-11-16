@@ -190,8 +190,10 @@ function SensorCard({ comp, rules, path, now }) {
           </>
         )}
       </div>
-      <div className="ov-label">
-        {cm.label} · {path?.split(' › ').pop() ?? comp.device_name}
+      <div className="ov-label">{cm.label}</div>
+      <div className="ov-device" title={path ?? ''}>
+        <strong>{comp.device_name}</strong>
+        {path && ` · ${path.split(' › ').pop()}`}
       </div>
       <div className="ov-meta">
         {thresholdText(comp, rules)}

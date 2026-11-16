@@ -80,6 +80,8 @@
   display: flex; align-items: center; gap: 8px;
 }
 .tree-node .icon-btn { width: 28px; height: 28px; }
+.tree-node .tree-type { flex: 0 0 68px; display: flex; }
+.tree-node .tree-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Mã đăng ký thiết bị */
 .code-chip {
