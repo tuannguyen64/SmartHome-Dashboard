@@ -85,6 +85,8 @@ export const COMMAND_STATUS = {
   failed: { label: 'Thất bại', tone: 'red' },
   skipped: { label: 'Bỏ qua', tone: 'gray' },
   pending: { label: 'Đang chờ', tone: 'blue' },
+  // backend thật: đã gửi tới Adafruit IO, bo chưa xác nhận riêng từng lệnh
+  sent: { label: 'Đã gửi', tone: 'blue' },
 };
 
 export const WEEKDAYS = [
