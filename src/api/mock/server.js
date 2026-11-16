@@ -1014,20 +1014,26 @@ export function listDevices({ search = '', registered = '', status = '', type_id
 
 export function adminOverview() {
   return respond(() => {
-    requireRole(requireUser(), ['admin', 'developer']);
+    const actor = requireUser();
+    requireRole(actor, ['admin', 'developer']);
     const timestamp = now();
-    const users = db.users;
-    const devices = db.devices;
+    // Kỹ thuật viên: chỉ tính trên thiết bị do mình lắp đặt
+    const technician = actor.role === 'developer';
+    const devices = technician ? db.devices.filter((d) => d.installed_by === actor._id) : db.devices;
+    const mine = new Set(devices.map((d) => d._id));
+    const users = technician ? db.users.filter((u) => devices.some((d) => d.owner_id === u._id)) : db.users;
+    const alerts = technician ? db.alerts.filter((a) => (a.device_ids ?? []).some((id) => mine.has(id)) || mine.has(a.device_id)) : db.alerts;
+    const commands = technician ? db.commands.filter((c) => mine.has(c.device_id)) : db.commands;
     const userById = new Map(users.map((u) => [u._id, u]));
     const deviceById = new Map(devices.map((d) => [d._id, d]));
     const vnNow = new Date(timestamp + 7 * 60 * 60 * 1000);
     vnNow.setUTCHours(0, 0, 0, 0);
     const todayStart = vnNow.getTime() - 7 * 60 * 60 * 1000;
-    const alertsToday = db.alerts.filter((a) => new Date(a.triggered_at).getTime() >= todayStart).length;
-    const recentLatencies = db.commands
+    const alertsToday = alerts.filter((a) => new Date(a.triggered_at).getTime() >= todayStart).length;
+    const recentLatencies = commands
       .filter((c) => c.latency_ms != null && timestamp - new Date(c.sent_at).getTime() <= 24 * 60 * 60 * 1000)
       .map((c) => c.latency_ms);
-    const commandsLastDay = db.commands.filter((c) => timestamp - new Date(c.sent_at).getTime() <= 24 * 60 * 60 * 1000);
+    const commandsLastDay = commands.filter((c) => timestamp - new Date(c.sent_at).getTime() <= 24 * 60 * 60 * 1000);
     const failedCommands = commandsLastDay.filter((c) => c.status === 'failed');
     const onlineDevices = devices.filter((d) => d.owner_id && isOnline(d)).length;
     const registeredDevices = devices.filter((d) => d.owner_id);
@@ -1054,7 +1060,7 @@ export function adminOverview() {
         updatedAt: d.last_seen,
       });
     });
-    db.alerts.filter((a) => a.status === 'active').forEach((a) => {
+    alerts.filter((a) => a.status === 'active').forEach((a) => {
       const relatedDevices = a.device_ids.map((id) => deviceById.get(id)).filter(Boolean);
       if (!relatedDevices.length) {
         incidents.set(`alert:${a._id}`, {
@@ -1084,7 +1090,7 @@ export function adminOverview() {
     const traffic = Array.from({ length: 12 }, (_, index) => {
       const bucketStart = timestamp - (11 - index) * 60 * 60 * 1000;
       const bucketEnd = bucketStart + 60 * 60 * 1000;
-      const hourCommands = db.commands.filter((c) => {
+      const hourCommands = commands.filter((c) => {
         const sent = new Date(c.sent_at).getTime();
         return sent >= bucketStart && sent < bucketEnd;
       });
@@ -1099,7 +1105,7 @@ export function adminOverview() {
     const latencyHistory = Array.from({ length: 12 }, (_, index) => {
       const bucketStart = timestamp - (11 - index) * 60 * 60 * 1000;
       const bucketEnd = bucketStart + 60 * 60 * 1000;
-      const bucketCommands = db.commands.filter((command) => {
+      const bucketCommands = commands.filter((command) => {
         const sent = new Date(command.sent_at).getTime();
         return sent >= bucketStart && sent < bucketEnd && command.latency_ms != null;
       });
@@ -1116,7 +1122,7 @@ export function adminOverview() {
       dayStart.setUTCDate(dayStart.getUTCDate() - (6 - index));
       const start = dayStart.getTime() - 7 * 60 * 60 * 1000;
       const end = start + 86400e3;
-      const incidents = db.alerts.filter((alert) => {
+      const incidents = alerts.filter((alert) => {
         const triggered = new Date(alert.triggered_at).getTime();
         return triggered >= start && triggered < end;
       });
@@ -1128,7 +1134,9 @@ export function adminOverview() {
     });
 
     return {
+      scope: technician ? 'technician' : 'system',
       users: { total: users.length, active: users.filter((u) => u.is_active !== false).length },
+      commands24h: commandsLastDay.length,
       devices: {
         total: devices.length,
         online: onlineDevices,
@@ -1143,7 +1151,7 @@ export function adminOverview() {
         count,
       })),
       alertsToday,
-      server: {
+      server: technician ? null : {
         healthy: sim.socket && sim.broker,
         avgLatencyMs: recentLatencies.length ? Math.round(recentLatencies.reduce((sum, value) => sum + value, 0) / recentLatencies.length) : null,
         deviceAvailabilityPercent: registeredDevices.length ? Math.round((onlineDevices / registeredDevices.length) * 1000) / 10 : null,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAdminDashboard } from '../hooks/useAdminDashboard.js';
 import { Badge, Empty, Skeleton } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
@@ -12,13 +12,6 @@ const METRICS = [
   { key: 'devices', label: 'Tổng số Thiết bị', icon: 'home', color: 'green' },
   { key: 'alerts', label: 'Cảnh báo hôm nay', icon: 'alert', color: 'amber' },
   { key: 'server', label: 'Sức khỏe máy chủ', icon: 'refresh', color: 'purple' },
-];
-
-const DEV_FILTERS = [
-  { key: 'overview', label: 'Tổng quan' },
-  { key: 'devices', label: 'Thiết bị' },
-  { key: 'alerts', label: 'Cảnh báo' },
-  { key: 'controls', label: 'Điều khiển' },
 ];
 
 function MetricCard({ metric, data }) {
@@ -92,12 +85,12 @@ function TrafficChart({ traffic }) {
   );
 }
 
-function SensorSummary({ sensors }) {
+function SensorSummary({ sensors, title = 'Chỉ số cảm biến toàn hệ thống' }) {
   return (
     <section className="card admin-sensors-card">
       <div className="card-head">
         <div>
-          <h2 className="card-title">Chỉ số cảm biến toàn hệ thống</h2>
+          <h2 className="card-title">{title}</h2>
           <p className="card-sub">Giá trị trung bình mới nhất từ thiết bị đang online</p>
         </div>
       </div>
@@ -170,7 +163,7 @@ function OperationsSummary({ server, latencyHistory, incidentHistory }) {
 }
 
 function IncidentTable({ incidents }) {
-  if (!incidents.length) return <Empty title="Không phát hiện thiết bị bất thường">Hệ thống hiện không có thiết bị offline hoặc cảnh báo đang mở.</Empty>;
+  if (!incidents.length) return <Empty title="Không phát hiện thiết bị bất thường">Không có thiết bị offline hoặc cảnh báo đang mở.</Empty>;
   return (
     <div className="table-wrap">
       <table className="table admin-incident-table">
@@ -200,64 +193,75 @@ function IncidentTable({ incidents }) {
   );
 }
 
-function DeveloperWorkspace({ data, filter, setFilter }) {
-  const cards = {
-    overview: [
-      { label: 'Thiết bị online', value: data.devices.online, detail: 'Đang gửi telemetry và phản hồi lệnh' },
-      { label: 'Thiết bị offline', value: data.devices.offline, detail: 'Cần kiểm tra kết nối / source điện' },
-      { label: 'Thiết bị chưa đăng ký', value: data.devices.unregistered, detail: 'Đang chờ mã đăng ký / cấp quyền' },
-      { label: 'Mức độ khỏe hệ thống', value: data.server.healthy ? 'Ổn định' : 'Cần xem xét', detail: data.server.avgLatencyMs == null ? 'Chưa có thông tin độ trễ' : `Độ trễ ~ ${data.server.avgLatencyMs} ms` },
-    ],
-    devices: [
-      { label: 'Tổng thiết bị', value: data.devices.total, detail: 'Đã tích hợp trong mock data' },
-      { label: 'Tỷ lệ online', value: `${Math.round((data.devices.online / Math.max(1, data.devices.total)) * 100)}%`, detail: 'Chỉ số hoạt động hiện tại' },
-      { label: 'Tổng người dùng', value: data.users.total, detail: 'Số tài khoản đang quản lý' },
-      { label: 'Tài khoản hoạt động', value: data.users.active, detail: 'Mức độ sử dụng hệ thống' },
-    ],
-    alerts: [
-      { label: 'Cảnh báo hôm nay', value: data.alertsToday, detail: 'Số sự cố được ghi nhận trong ngày' },
-      { label: 'Sự cố đang mở', value: data.incidents.filter((incident) => incident.status !== 'resolved').length, detail: 'Tình trạng cần theo dõi' },
-      { label: 'Độ trễ lệnh', value: data.server.avgLatencyMs == null ? '—' : `${data.server.avgLatencyMs} ms`, detail: 'Đánh giá thời gian phản hồi' },
-      { label: 'Trạng thái server', value: data.server.healthy ? 'Healthy' : 'Warning', detail: data.server.healthy ? 'Máy chủ đang ổn định' : 'Có dấu hiệu gián đoạn' },
-    ],
-    controls: [
-      { label: 'Lệnh thất bại', value: data.server.commandFailurePercent == null ? '—' : `${data.server.commandFailurePercent}%`, detail: 'Tỉ lệ lệnh không thực thi thành công' },
-      { label: 'Uptime thiết bị', value: data.server.deviceAvailabilityPercent == null ? '—' : `${data.server.deviceAvailabilityPercent}%`, detail: 'Thời gian thiết bị hoạt động' },
-      { label: 'Sự cố 7 ngày', value: data.incidentHistory.reduce((sum, day) => sum + day.total, 0), detail: 'Tổng số sự cố trong 7 ngày' },
-      { label: 'Lưu lượng MQTT', value: `${data.traffic.reduce((sum, item) => sum + (item.mqttIn || 0) + (item.mqttOut || 0), 0)}`, detail: 'Khối lượng tin nhắn hàng giờ' },
-    ],
-  };
-
+function IncidentHistoryChart({ history }) {
   return (
-    <section className="card admin-dev-panel">
-      <div className="card-head">
-        <div>
-          <h2 className="card-title">Bảng vận hành kỹ thuật</h2>
-          <p className="card-sub">Phân nhóm theo hệ thống, thiết bị, cảnh báo và điều khiển</p>
-        </div>
+    <section className="card admin-ops-chart">
+      <div className="card-head"><div><h2 className="card-title">Lịch sử sự cố</h2><p className="card-sub">Số cảnh báo phát sinh theo ngày · 7 ngày</p></div></div>
+      <div className="admin-small-chart">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={history} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+            <CartesianGrid stroke="#eef2f7" vertical={false} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: '#647896', fontSize: 11 }} />
+            <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#647896', fontSize: 11 }} />
+            <Tooltip contentStyle={{ border: '1px solid #dfe7f2', borderRadius: 10 }} />
+            <Bar dataKey="total" name="Tổng sự cố" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="active" name="Đang mở" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
-      <div className="admin-dev-filters">
-        {DEV_FILTERS.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            className={`admin-dev-filter${filter === item.key ? ' active' : ''}`}
-            onClick={() => setFilter(item.key)}
-          >
-            {item.label}
-          </button>
-        ))}
+    </section>
+  );
+}
+
+// Kỹ thuật viên: mọi số liệu chỉ tính trên thiết bị do mình lắp, không có thông tin máy chủ / toàn hệ thống
+function TechnicianOverview({ data }) {
+  const { devices } = data;
+  const uptime = devices.total ? Math.round((devices.online / devices.total) * 100) : null;
+  const cards = [
+    { key: 'customers', label: 'Khách hàng', icon: 'user', color: 'blue', value: data.users.total, detail: 'Có thiết bị do bạn lắp đặt' },
+    { key: 'devices', label: 'Thiết bị đã lắp', icon: 'home', color: 'green', value: devices.total, detail: `${devices.online} online · ${devices.offline} offline`, badge: <Badge tone="green" dot>{devices.online} online</Badge> },
+    { key: 'alerts', label: 'Cảnh báo hôm nay', icon: 'alert', color: 'amber', value: data.alertsToday, detail: 'Trên các thiết bị bạn đã lắp' },
+    { key: 'commands', label: 'Lệnh 24 giờ', icon: 'send', color: 'purple', value: data.commands24h ?? 0, detail: uptime == null ? 'Chưa có thiết bị nào' : `Tỷ lệ thiết bị online ${uptime}%` },
+  ];
+  if (!devices.total) {
+    return (
+      <div className="card">
+        <Empty title="Bạn chưa lắp thiết bị nào" action={<Link className="btn btn-primary" to="/developer/lap-dat">Lắp đặt cho khách</Link>}>
+          Số liệu ở đây chỉ tính trên các thiết bị bạn đã lắp tại nhà khách.
+        </Empty>
       </div>
-      <div className="admin-dev-grid">
-        {cards[filter].map((card) => (
-          <article key={card.label} className="admin-dev-metric">
-            <div className="admin-dev-label">{card.label}</div>
-            <div className="admin-dev-value">{card.value}</div>
-            <div className="admin-dev-detail">{card.detail}</div>
+    );
+  }
+  return (
+    <>
+      <div className="grid grid-4 admin-metrics">
+        {cards.map((card) => (
+          <article key={card.key} className="admin-metric card">
+            <div className="admin-metric-top">
+              <span className={`admin-metric-icon ${card.color}`}><Icon name={card.icon} size={20} /></span>
+              {card.badge}
+            </div>
+            <div className="admin-metric-label">{card.label}</div>
+            <div className="admin-metric-value">{Number(card.value).toLocaleString('vi-VN')}</div>
+            <div className="admin-metric-detail">{card.detail}</div>
           </article>
         ))}
       </div>
-    </section>
+      <SensorSummary sensors={data.sensors} title="Chỉ số cảm biến tại nhà khách" />
+      <div className="admin-dashboard-grid">
+        <section className="card admin-incidents-card">
+          <div className="card-head">
+            <div>
+              <h2 className="card-title">Thiết bị cần kiểm tra</h2>
+              <p className="card-sub">Thiết bị bạn lắp đang mất kết nối hoặc có cảnh báo</p>
+            </div>
+            <Badge tone={data.incidents.length ? 'amber' : 'green'} dot>{data.incidents.length} sự cố</Badge>
+          </div>
+          <IncidentTable incidents={data.incidents} />
+        </section>
+        <IncidentHistoryChart history={data.incidentHistory} />
+      </div>
+    </>
   );
 }
 
@@ -265,7 +269,6 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const { data, loading, error, reload } = useAdminDashboard();
   const isDeveloper = user?.role === 'developer';
-  const [devFilter, setDevFilter] = useState('overview');
   return (
     <div className="page admin-page">
       <div className="page-head">
@@ -273,7 +276,7 @@ export default function AdminDashboard() {
           <h1 className="page-title">{isDeveloper ? 'Tổng quan Kỹ thuật viên' : 'Tổng quan Admin'}</h1>
           <p className="page-sub">
             {isDeveloper
-              ? 'Theo dõi trạng thái thiết bị, lỗi điều khiển và số liệu vận hành để hỗ trợ lắp đặt, bảo trì tại nhà khách'
+              ? 'Số liệu chỉ tính trên các thiết bị bạn đã lắp đặt tại nhà khách'
               : 'Giám sát hoạt động và sức khỏe toàn hệ thống SmartHome'}
           </p>
         </div>
@@ -282,12 +285,11 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {isDeveloper && data && (
-        <DeveloperWorkspace data={data} filter={devFilter} setFilter={setDevFilter} />
-      )}
       {error && <div className="alert-box alert-box-red" role="alert">{error.message}</div>}
       {loading && !data ? (
         <div className="grid grid-4">{METRICS.map((metric) => <Skeleton key={metric.key} height={164} />)}</div>
+      ) : data && isDeveloper ? (
+        <TechnicianOverview data={data} />
       ) : data ? (
         <>
           <div className="grid grid-4 admin-metrics">
