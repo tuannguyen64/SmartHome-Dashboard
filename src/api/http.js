@@ -6,6 +6,7 @@
 // ngưỡng cảnh báo (/alert-rules) và cảnh báo (/alerts).
 // Danh mục (/types, /component-models, /device-models) và /devices dùng thẳng API backend (admin, developer).
 
+import { io } from 'socket.io-client';
 import { getToken } from './session.js';
 import { ApiError } from './errors.js';
 import { nextCronRun } from '../utils/format.js';
@@ -346,7 +347,78 @@ export const deleteSchedule = (id) => del(`/devices/${deviceOfSchedule(id)}/sche
 
 
 
-// ---- thời gian thực: backend hiện chưa có WebSocket → các trang tự làm mới định kỳ
-export const subscribe = () => () => {};
-export const isSocketConnected = () => true;
+// ---- thời gian thực: Socket.IO của backend (/socket.io, Vite chuyển tiếp như /api)
+// Sự kiện backend được đổi sang đúng dạng sự kiện của chế độ giả lập: component, device, alert, notice, command, connection.
+// Các trang vẫn tự làm mới định kỳ để dự phòng khi mất kết nối.
+const listeners = new Set();
+let socket = null;
+let socketUp = null; // null = chưa kết nối lần nào: chưa coi là mất kết nối
+const fire = (type, payload) => listeners.forEach((fn) => fn({ type, payload }));
+
+// Số đo / trạng thái mới: tải giá trị mới nhất của thiết bị (gom các tin tới gần nhau, mỗi thiết bị một lần)
+const refreshTimers = new Map();
+function refreshDevice(deviceId, info) {
+  clearTimeout(refreshTimers.get(deviceId));
+  refreshTimers.set(
+    deviceId,
+    setTimeout(async () => {
+      refreshTimers.delete(deviceId);
+      try {
+        const r = await deviceLatest(deviceId);
+        r.components.forEach((c) =>
+          fire('component', {
+            ...c,
+            _id: componentKey(deviceId, c.componentModel._id),
+            device_id: deviceId,
+            device_name: info?.name,
+            device_mode: info?.mode,
+            device_online: true,
+            place_id: info?.place_id ?? null,
+          }),
+        );
+      } catch {
+        /* lượt làm mới định kỳ sẽ lấy lại */
+      }
+    }, 400),
+  );
+}
+
+function connectSocket() {
+  if (socket || !getToken()) return;
+  socket = io({ auth: (cb) => cb({ token: getToken() }), transports: ['websocket', 'polling'] });
+  const setUp = (up) => {
+    const prev = socketUp;
+    if (prev === up) return;
+    socketUp = up;
+    // Lần kết nối đầu tiên thành công: không báo (các trang vừa tải xong, khỏi tải lại lần nữa)
+    if (prev !== null || !up) fire('connection', { connected: up });
+  };
+  socket.on('connect', () => setUp(true));
+  socket.on('disconnect', () => setUp(false));
+  socket.on('connect_error', () => setUp(false));
+  socket.on('device:data', (e) => refreshDevice(e.deviceId, e.device));
+  socket.on('device:control', (e) => refreshDevice(e.deviceId, e.device));
+  socket.on('device:status', (e) => fire('device', { _id: e.deviceId, online: e.online, mode: e.mode, last_seen: e.last_seen }));
+  socket.on('alert', ({ alert, created }) => {
+    const a = toAlert(alert);
+    fire('alert', a);
+    if (created) fire('notice', { tone: a.severity === 'danger' ? 'red' : 'amber', title: 'Cảnh báo mới', text: a.message, alertId: a._id });
+  });
+  socket.on('command', ({ command }) => fire('command', toCommand(command, command.device_id, new Map())));
+}
+
+export function subscribe(fn) {
+  listeners.add(fn);
+  connectSocket();
+  return () => {
+    listeners.delete(fn);
+    // Không còn trang nào nghe (vd đăng xuất): đóng kết nối, lần sau mở lại với token mới
+    if (!listeners.size && socket) {
+      socket.disconnect();
+      socket = null;
+      socketUp = null;
+    }
+  };
+}
+export const isSocketConnected = () => socketUp !== false;
 export const simulator = null;
