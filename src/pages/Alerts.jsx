@@ -221,6 +221,7 @@ export default function Alerts() {
                         {CHANNELS[d.channel] ?? d.channel}
                         {d.note && <span className="muted"> · {d.note}</span>}
                         {d.last_error && <div className="small muted">{d.last_error}</div>}
+                        {d.status === 'failed' && d.next_retry_at && <div className="small muted">Sẽ tự gửi lại lúc {fmtDateTime(d.next_retry_at)}</div>}
                       </span>
                       <Badge tone={DELIVERY[d.status]?.tone ?? 'gray'}>
                         {DELIVERY[d.status]?.label ?? d.status}
