@@ -57,6 +57,11 @@ export const me = () => get('/auth/me');
 // Backend chưa có PATCH /users/me → sửa chính mình qua PATCH /users/:id (user được sửa chính mình)
 export const updateMe = async (body) => patch(`/users/${(await me())._id}`, body);
 export const changePassword = (current_password, new_password) => patch('/users/me/password', { current_password, new_password });
+// Liên kết bot Telegram: tạo link t.me/<bot>?start=<mã>, người dùng bấm Start rồi web hỏi lại trạng thái
+export const telegramStatus = () => get('/users/me/telegram');
+export const telegramLink = () => post('/users/me/telegram/link');
+export const telegramUnlink = () => del('/users/me/telegram');
+export const telegramTest = () => post('/users/me/telegram/test');
 
 // ---- quản trị tài khoản
 export const listUsers = (q) => get('/users', q);

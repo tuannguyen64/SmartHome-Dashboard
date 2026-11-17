@@ -663,6 +663,51 @@ export function updateMe({ full_name, telegram_chat_id, email, phone, address })
   });
 }
 
+// Telegram giả lập: bot "smarthome_demo_bot"; mở link xong khoảng 4 giây thì coi như đã bấm Start
+const MOCK_BOT = 'smarthome_demo_bot';
+const tgLinks = {};
+const tgState = (u) => ({ enabled: true, bot_username: MOCK_BOT, linked: !!u.telegram_chat_id, telegram_chat_id: u.telegram_chat_id ?? null });
+
+export const telegramStatus = () => respond(() => tgState(requireUser()), 80);
+
+export function telegramLink() {
+  return respond(() => {
+    const u = requireUser();
+    const code = Math.random().toString(36).slice(2, 12);
+    const expires_at = new Date(now() + 10 * 60000).toISOString();
+    tgLinks[u._id] = code;
+    setTimeout(() => {
+      if (tgLinks[u._id] !== code) return;
+      delete tgLinks[u._id];
+      start();
+      const live = byId(db.users, u._id);
+      if (!live) return;
+      live.telegram_chat_id = String(5000000000 + Math.floor(Math.random() * 1e9));
+      writeAudit({ action: 'user.telegram.linked', userId: live._id, username: live.username, details: 'Liên kết Telegram qua bot' });
+      save();
+    }, 4000);
+    return { url: `https://t.me/${MOCK_BOT}?start=${code}`, bot_username: MOCK_BOT, expires_at };
+  });
+}
+
+export function telegramUnlink() {
+  return respond(() => {
+    const u = requireUser();
+    u.telegram_chat_id = null;
+    delete tgLinks[u._id];
+    writeAudit({ action: 'user.telegram.unlinked', userId: u._id, username: u.username, details: 'Hủy liên kết Telegram' });
+    return pub(u);
+  });
+}
+
+export function telegramTest() {
+  return respond(() => {
+    const u = requireUser();
+    if (!u.telegram_chat_id) throw new ApiError('Người nhận chưa liên kết Telegram', 'validation');
+    return { status: 'sent', sent_at: iso() };
+  });
+}
+
 export function changePassword(current_password, new_password) {
   return respond(() => {
     const u = requireUser();
@@ -1762,7 +1807,7 @@ export function saveRule(input) {
     }
     if (Object.keys(fields).length) throw new ApiError('Quy tắc chưa hợp lệ', 'validation', { fields });
     if (channels.includes('telegram') && !u.telegram_chat_id && !byId(db.threshold_rules, input._id)?.channels.includes('telegram'))
-      throw new ApiError('Bạn chưa khai báo Telegram chat ID. Thêm ở trang Thông tin cá nhân hoặc bỏ chọn Telegram.', 'telegram_unlinked');
+      throw new ApiError('Bạn chưa liên kết Telegram. Vào trang Thông tin cá nhân để liên kết hoặc bỏ chọn Telegram.', 'telegram_unlinked');
     // Một thiết bị chấp hành chỉ thuộc một quy tắc tự động đang bật (UC04-2 A2)
     if (aa?.enabled && input.enabled !== false) {
       const other = db.threshold_rules.find((r) => r._id !== input._id && r.enabled && r.auto_action?.enabled && r.auto_action.component_id === aa.component_id);
